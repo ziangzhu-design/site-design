@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v12 loaded");
+  console.log("[fx] custom cursor v13 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -28,7 +28,7 @@
   // We look at every element under the pointer (including inside open shadow roots,
   // like the clock) and test the on-screen boxes of their text against the pointer.
   var PAD = 2;
-  var MEDIA = /^(IMG|VIDEO|CANVAS|PICTURE)$/;
+  var MEDIA = /^(IMG|VIDEO|PICTURE)$/;
   function collect(root, px, py, out, depth) {
     var els = root.elementsFromPoint ? root.elementsFromPoint(px, py) : [];
     for (var i = 0; i < els.length; i++) {
@@ -54,6 +54,15 @@
     }
     return false;
   }
+  // A real, visible picture - not a page-sized backdrop/background layer
+  function isRealMedia(el) {
+    if (!MEDIA.test(el.tagName)) return false;
+    if (el.closest && el.closest(".backdrop")) return false;
+    var r = el.getBoundingClientRect();
+    if (r.width >= window.innerWidth * 0.95 && r.height >= window.innerHeight * 0.95) return false;
+    if (parseFloat(getComputedStyle(el).opacity) < 0.05) return false;
+    return true;
+  }
   function overText(px, py) {
     var els = [];
     collect(document, px, py, els, 0);
@@ -61,7 +70,7 @@
       var el = els[i];
       if (el === document.documentElement || el === document.body) continue;
       // Images and video: the whole picture counts
-      if (MEDIA.test(el.tagName)) return true;
+      if (isRealMedia(el)) return true;
       for (var n = el.firstChild; n; n = n.nextSibling) {
         if (n.nodeType === 3 && n.nodeValue.trim() && textHit(n, px, py)) return true;
       }
