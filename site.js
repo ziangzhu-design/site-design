@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v6 loaded");
+  console.log("[fx] custom cursor v7 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -24,6 +24,17 @@
   }
 
   // True when the pointer is over text (not images/video), so the ball should blend
+  // Extra things that should invert too: the clock widget (by name), canvas drawings, clock embeds
+  var REFLECT = "[class*='clock' i], [id*='clock' i], [data-clock], canvas, iframe[src*='clock' i]";
+  function overReflect(px, py) {
+    var stack = document.elementsFromPoint(px, py);
+    for (var i = 0; i < stack.length; i++) {
+      if (stack[i].matches && stack[i].matches(REFLECT)) return true;
+      if (stack[i].closest && stack[i].closest(REFLECT)) return true;
+    }
+    return false;
+  }
+
   var NOT_TEXT = /^(IMG|VIDEO|CANVAS|SVG|IFRAME|HTML|BODY)$/;
   function overText(t) {
     if (!t || NOT_TEXT.test(t.tagName)) return false;
@@ -57,7 +68,7 @@
       frame();
     }
     var t = e.target;
-    document.documentElement.classList.toggle("fx-over-text", overText(t));
+    document.documentElement.classList.toggle("fx-over-text", overText(t) || overReflect(x, y));
     setClass("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
   }, { passive: true });
 
