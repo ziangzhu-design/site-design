@@ -1,28 +1,35 @@
-/* Portfolio effects - loaded into Cargo via jsDelivr */
-
-/* Scroll reveal: elements start slightly lowered and invisible, then ease in */
-.fx-reveal {
+/* Custom cursor - white ball that inverts against what's beneath it */
+.fx-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: #fff;
+  /* "difference" flips colors under the ball, so text stays readable */
+  mix-blend-mode: difference;
+  pointer-events: none;
+  z-index: 2147483647;
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: opacity 0.25s ease;
+  will-change: transform;
 }
-.fx-reveal.fx-in {
-  opacity: 1;
-  transform: none;
+.fx-cursor-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
+.fx-cursor.fx-visible { opacity: 1; }
+.fx-cursor.fx-link .fx-cursor-inner { transform: scale(1.8); }
+.fx-cursor.fx-down .fx-cursor-inner { transform: scale(0.8); }
+.fx-cursor.fx-link.fx-down .fx-cursor-inner { transform: scale(1.5); }
 
-/* Gentle hover zoom on images */
-img.fx-hover {
-  transition: transform 0.5s ease;
-}
-img.fx-hover:hover {
-  transform: scale(1.03);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fx-reveal, img.fx-hover {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
+/* Hide the normal arrow only while the custom cursor is running */
+html.fx-cursor-on,
+html.fx-cursor-on * {
+  cursor: none !important;
 }
