@@ -4,9 +4,9 @@
   window.__fxLoaded = true;
 
   // Only on devices with a real mouse; touch screens keep default behavior
-  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor loaded");
+  console.log("[fx] custom cursor v2 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
