@@ -1,0 +1,28 @@
+/* Portfolio effects - loaded into Cargo via jsDelivr */
+
+/* Scroll reveal: elements start slightly lowered and invisible, then ease in */
+.fx-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.fx-reveal.fx-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Gentle hover zoom on images */
+img.fx-hover {
+  transition: transform 0.5s ease;
+}
+img.fx-hover:hover {
+  transform: scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-reveal, img.fx-hover {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
