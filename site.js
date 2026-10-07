@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v11 loaded");
+  console.log("[fx] custom cursor v12 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -28,6 +28,7 @@
   // We look at every element under the pointer (including inside open shadow roots,
   // like the clock) and test the on-screen boxes of their text against the pointer.
   var PAD = 2;
+  var MEDIA = /^(IMG|VIDEO|CANVAS|PICTURE)$/;
   function collect(root, px, py, out, depth) {
     var els = root.elementsFromPoint ? root.elementsFromPoint(px, py) : [];
     for (var i = 0; i < els.length; i++) {
@@ -59,6 +60,8 @@
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       if (el === document.documentElement || el === document.body) continue;
+      // Images and video: the whole picture counts
+      if (MEDIA.test(el.tagName)) return true;
       for (var n = el.firstChild; n; n = n.nextSibling) {
         if (n.nodeType === 3 && n.nodeValue.trim() && textHit(n, px, py)) return true;
       }
