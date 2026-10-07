@@ -1,4 +1,5 @@
-/* Custom cursor - white ball that inverts against what's beneath it */
+/* Custom cursor - white breathing ball.
+   Plain white normally; inverts against text (class fx-text) so words stay readable. */
 .fx-cursor {
   position: fixed;
   top: 0;
@@ -6,27 +7,40 @@
   width: 18px;
   height: 18px;
   margin: -9px 0 0 -9px;
-  border-radius: 50%;
-  background: #fff;
-  /* "difference" flips colors under the ball, so text stays readable */
-  mix-blend-mode: difference;
   pointer-events: none;
   z-index: 2147483647;
   opacity: 0;
   transition: opacity 0.25s ease;
   will-change: transform;
 }
+.fx-cursor.fx-text { mix-blend-mode: difference; }
+.fx-cursor.fx-visible { opacity: 1; }
+
+/* Layer 1: grows over clickable things */
 .fx-cursor-inner {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.fx-cursor.fx-link .fx-cursor-inner { transform: scale(1.8); }
+.fx-cursor.fx-down .fx-cursor-inner { transform: scale(0.8); }
+.fx-cursor.fx-link.fx-down .fx-cursor-inner { transform: scale(1.5); }
+
+/* Layer 2: the white ball itself, gently breathing */
+.fx-cursor-dot {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+  animation: fx-breathe 2.4s ease-in-out infinite;
 }
-.fx-cursor.fx-visible { opacity: 1; }
-.fx-cursor.fx-link .fx-cursor-inner { transform: scale(1.8); }
-.fx-cursor.fx-down .fx-cursor-inner { transform: scale(0.8); }
-.fx-cursor.fx-link.fx-down .fx-cursor-inner { transform: scale(1.5); }
+@keyframes fx-breathe {
+  0%, 100% { transform: scale(0.85); }
+  50%      { transform: scale(1.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-cursor-dot { animation: none; }
+}
 
 /* Hide the normal arrow only while the custom cursor is running */
 html.fx-cursor-on,
