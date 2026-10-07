@@ -10,11 +10,17 @@
   pointer-events: none;
   z-index: 2147483647;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.5s ease;
   will-change: transform;
 }
-.fx-cursor.fx-text { mix-blend-mode: difference; }
 .fx-cursor.fx-visible { opacity: 1; }
+
+/* Second layer inverts colors; hidden until the pointer is over text.
+   Cross-fading it with the white layer makes the color change gentle. */
+.fx-cursor.fx-blend { mix-blend-mode: difference; }
+.fx-cursor.fx-blend.fx-visible { opacity: 0; }
+html.fx-over-text .fx-cursor.fx-blend.fx-visible { opacity: 1; }
+html.fx-over-text .fx-cursor:not(.fx-blend).fx-visible { opacity: 0; }
 
 /* Layer 1: grows over clickable things */
 .fx-cursor-inner {

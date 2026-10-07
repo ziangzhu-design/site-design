@@ -6,14 +6,22 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v5 loaded");
+  console.log("[fx] custom cursor v6 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
-  var ball = document.createElement("div");
-  ball.className = "fx-cursor";
-  ball.innerHTML = '<div class="fx-cursor-inner"><div class="fx-cursor-dot"></div></div>';
-  document.body.appendChild(ball);
+  // Two stacked balls: a plain white one, and one that inverts what's beneath it.
+  // Blend modes can't animate, so we cross-fade between the two for a soft transition.
+  var balls = ["", " fx-blend"].map(function (extra) {
+    var el = document.createElement("div");
+    el.className = "fx-cursor" + extra;
+    el.innerHTML = '<div class="fx-cursor-inner"><div class="fx-cursor-dot"></div></div>';
+    document.body.appendChild(el);
+    return el;
+  });
+  function setClass(name, on) {
+    balls.forEach(function (b) { b.classList.toggle(name, on); });
+  }
 
   // True when the pointer is over text (not images/video), so the ball should blend
   var NOT_TEXT = /^(IMG|VIDEO|CANVAS|SVG|IFRAME|HTML|BODY)$/;
@@ -32,7 +40,9 @@
   function frame() {
     cx += (x - cx) * 0.25;
     cy += (y - cy) * 0.25;
-    ball.style.transform = "translate3d(" + cx + "px," + cy + "px,0)";
+    var tf = "translate3d(" + cx + "px," + cy + "px,0)";
+    balls[0].style.transform = tf;
+    balls[1].style.transform = tf;
     requestAnimationFrame(frame);
   }
 
@@ -43,16 +53,16 @@
       running = true;
       cx = x; cy = y;
       document.documentElement.classList.add("fx-cursor-on");
-      ball.classList.add("fx-visible");
+      setClass("fx-visible", true);
       frame();
     }
     var t = e.target;
-    ball.classList.toggle("fx-text", overText(t));
-    ball.classList.toggle("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
+    document.documentElement.classList.toggle("fx-over-text", overText(t));
+    setClass("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
   }, { passive: true });
 
-  document.addEventListener("mousedown", function () { ball.classList.add("fx-down"); });
-  document.addEventListener("mouseup", function () { ball.classList.remove("fx-down"); });
-  document.documentElement.addEventListener("mouseleave", function () { ball.classList.remove("fx-visible"); });
-  document.documentElement.addEventListener("mouseenter", function () { ball.classList.add("fx-visible"); });
+  document.addEventListener("mousedown", function () { setClass("fx-down", true); });
+  document.addEventListener("mouseup", function () { setClass("fx-down", false); });
+  document.documentElement.addEventListener("mouseleave", function () { setClass("fx-visible", false); });
+  document.documentElement.addEventListener("mouseenter", function () { setClass("fx-visible", true); });
 })();
