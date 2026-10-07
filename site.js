@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v9 loaded");
+  console.log("[fx] custom cursor v10 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -24,22 +24,36 @@
   }
 
   // True when the pointer is over text (not images/video), so the ball should blend
-  // Extra things that should invert too: the clock widget (by name), canvas drawings, clock embeds
-  var REFLECT = "digital-clock, [class*='clock' i], [id*='clock' i], [data-clock], canvas, iframe[src*='clock' i], [class^='cmtext'], [class^='cmtitle'], [class*=' cmtext'], [class*=' cmtitle']";
-  function overReflect(px, py) {
-    var stack = document.elementsFromPoint(px, py);
-    for (var i = 0; i < stack.length; i++) {
-      if (stack[i].matches && stack[i].matches(REFLECT)) return true;
-      if (stack[i].closest && stack[i].closest(REFLECT)) return true;
+  // True only when the pointer is physically over a piece of text.
+  // We look at every element under the pointer (including inside open shadow roots,
+  // like the clock) and test the on-screen boxes of their text against the pointer.
+  var PAD = 2;
+  function collect(root, px, py, out, depth) {
+    var els = root.elementsFromPoint ? root.elementsFromPoint(px, py) : [];
+    for (var i = 0; i < els.length; i++) {
+      out.push(els[i]);
+      if (els[i].shadowRoot && depth < 3) collect(els[i].shadowRoot, px, py, out, depth + 1);
+    }
+  }
+  var range = document.createRange();
+  function textHit(node, px, py) {
+    range.selectNodeContents(node);
+    var rects = range.getClientRects();
+    for (var i = 0; i < rects.length; i++) {
+      var r = rects[i];
+      if (px >= r.left - PAD && px <= r.right + PAD && py >= r.top - PAD && py <= r.bottom + PAD) return true;
     }
     return false;
   }
-
-  var NOT_TEXT = /^(IMG|VIDEO|CANVAS|SVG|IFRAME|HTML|BODY)$/;
-  function overText(t) {
-    if (!t || NOT_TEXT.test(t.tagName)) return false;
-    for (var n = t.firstChild; n; n = n.nextSibling) {
-      if (n.nodeType === 3 && n.nodeValue.trim()) return true;
+  function overText(px, py) {
+    var els = [];
+    collect(document, px, py, els, 0);
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el === document.documentElement || el === document.body) continue;
+      for (var n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3 && n.nodeValue.trim() && textHit(n, px, py)) return true;
+      }
     }
     return false;
   }
@@ -68,7 +82,7 @@
       frame();
     }
     var t = e.target;
-    document.documentElement.classList.toggle("fx-over-text", overText(t) || overReflect(x, y));
+    document.documentElement.classList.toggle("fx-over-text", overText(x, y));
     setClass("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
   }, { passive: true });
 
