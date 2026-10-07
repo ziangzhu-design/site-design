@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v3 loaded");
+  console.log("[fx] custom cursor v4 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -16,7 +16,15 @@
   document.body.appendChild(ball);
 
   // True when the pointer is over text (not images/video), so the ball should blend
+  var MEDIA = /^(IMG|VIDEO|CANVAS|PICTURE)$/;
   var NOT_TEXT = /^(IMG|VIDEO|CANVAS|SVG|IFRAME|HTML|BODY)$/;
+  function overMedia(px, py) {
+    var stack = document.elementsFromPoint(px, py);
+    for (var i = 0; i < stack.length; i++) {
+      if (MEDIA.test(stack[i].tagName) || (stack[i].closest && stack[i].closest("svg"))) return true;
+    }
+    return false;
+  }
   function overText(t) {
     if (!t || NOT_TEXT.test(t.tagName)) return false;
     for (var n = t.firstChild; n; n = n.nextSibling) {
@@ -47,7 +55,7 @@
       frame();
     }
     var t = e.target;
-    ball.classList.toggle("fx-text", overText(t));
+    ball.classList.toggle("fx-text", overText(t) || overMedia(x, y));
     ball.classList.toggle("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
   }, { passive: true });
 
