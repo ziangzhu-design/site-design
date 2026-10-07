@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v10 loaded");
+  console.log("[fx] custom cursor v11 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -45,6 +45,14 @@
     }
     return false;
   }
+  // Walk every text node inside a root (e.g. a clock's shadow root) and test each one
+  function anyTextHit(root, px, py) {
+    var w = document.createTreeWalker(root, 4 /* SHOW_TEXT */);
+    for (var n = w.nextNode(), c = 0; n && c < 500; n = w.nextNode(), c++) {
+      if (n.nodeValue.trim() && textHit(n, px, py)) return true;
+    }
+    return false;
+  }
   function overText(px, py) {
     var els = [];
     collect(document, px, py, els, 0);
@@ -53,6 +61,16 @@
       if (el === document.documentElement || el === document.body) continue;
       for (var n = el.firstChild; n; n = n.nextSibling) {
         if (n.nodeType === 3 && n.nodeValue.trim() && textHit(n, px, py)) return true;
+      }
+      // Text hidden inside a shadow root (the clock's digits live here)
+      if (el.shadowRoot && anyTextHit(el.shadowRoot, px, py)) return true;
+      // Backup for the clock: if we can't see its text, use the box of the clock itself
+      if (el.tagName === "DIGITAL-CLOCK") {
+        var rs = el.getClientRects();
+        for (var j = 0; j < rs.length; j++) {
+          var r = rs[j];
+          if (px >= r.left - PAD && px <= r.right + PAD && py >= r.top - PAD && py <= r.bottom + PAD) return true;
+        }
       }
     }
     return false;
