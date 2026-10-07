@@ -6,7 +6,7 @@
   // Only on devices with a real mouse; touch screens keep default behavior
   if (window.matchMedia("(hover: none)").matches) return;
 
-  console.log("[fx] custom cursor v8 loaded");
+  console.log("[fx] custom cursor v9 loaded");
 
   var CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [onclick]";
 
@@ -25,7 +25,7 @@
 
   // True when the pointer is over text (not images/video), so the ball should blend
   // Extra things that should invert too: the clock widget (by name), canvas drawings, clock embeds
-  var REFLECT = "[class*='clock' i], [id*='clock' i], [data-clock], canvas, iframe[src*='clock' i], [class^='cmtext'], [class^='cmtitle'], [class*=' cmtext'], [class*=' cmtitle']";
+  var REFLECT = "digital-clock, [class*='clock' i], [id*='clock' i], [data-clock], canvas, iframe[src*='clock' i], [class^='cmtext'], [class^='cmtitle'], [class*=' cmtext'], [class*=' cmtitle']";
   function overReflect(px, py) {
     var stack = document.elementsFromPoint(px, py);
     for (var i = 0; i < stack.length; i++) {
