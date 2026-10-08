@@ -64,8 +64,9 @@ html.fx-cursor-on * {
   --fx-icon-w: clamp(32px, 3vw, 60px);     /* hamburger width */
   --fx-icon-h: calc(var(--fx-icon-w) * 0.55);
   --fx-nav-pad: clamp(20px, 3vw, 60px);    /* screen edge to icon */
-  --fx-nav-hit: 14px;                      /* extra tappable area around the icon */
-  --fx-nav-gap: 12px;                      /* clear space between the hamburger and the page content */
+  --fx-nav-hit: 14px;                      /* extra tappable area to the left and right of the icon */
+  --fx-nav-hit-top: 24px;                  /* extra tappable area above the icon */
+  --fx-nav-gap: 4px;                       /* clear space between the hamburger and the page content */
   /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
   --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
 }
@@ -120,16 +121,24 @@ html {
   all: unset;
   box-sizing: content-box;
   display: block;
-  padding: var(--fx-nav-hit);
+  /* The tappable area is taller above the icon than below it: below, it stops at the gap, so it
+     never covers the page content that starts right after. The shift keeps the icon itself on
+     the bar's centre line. */
+  padding: var(--fx-nav-hit-top) var(--fx-nav-hit) var(--fx-nav-gap);
+  transform: translateY(calc((var(--fx-nav-gap) - var(--fx-nav-hit-top)) / 2));
   color: inherit;
   cursor: pointer;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
+/* Keyboard focus ring: drawn around the icon itself, not the (lopsided) tappable area */
 .fx-nav button:focus-visible {
+  outline: none;
+}
+.fx-nav button:focus-visible .fx-burger {
   outline: 2px solid currentColor;
-  outline-offset: -2px;
+  outline-offset: 3px;
 }
 
 /* Hamburger: three lines, turns into an X while open */
