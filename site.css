@@ -65,7 +65,9 @@ html.fx-cursor-on * {
   --fx-icon-h: calc(var(--fx-icon-w) * 0.55);
   --fx-nav-pad: clamp(20px, 3vw, 60px);    /* screen edge to icon */
   --fx-nav-hit: 14px;                      /* extra tappable area around the icon */
-  --fx-nav-gutter: var(--fx-nav-h);        /* empty space kept under the bar, above the page content */
+  --fx-nav-gap: 12px;                      /* clear space between the hamburger and the page content */
+  /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
+  --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
 }
 
 /* Gutter under the bar: page content starts below the bar instead of behind it, so it never
