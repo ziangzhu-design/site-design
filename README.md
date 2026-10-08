@@ -8,8 +8,8 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
 
 ## What's in it
 - **Navigation bar** - fixed to the top. Logo placeholder on the left, hamburger on the
-  right. White icons that invert against the page. The hamburger opens a small menu whose
-  links are the `NAV_LINKS` list at the top of `site.js`.
+  right. The icons use the page's own text color (no inverting). The hamburger opens a small
+  menu whose links are the `NAV_LINKS` list at the top of `site.js`.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images and the clock.
 

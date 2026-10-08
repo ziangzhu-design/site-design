@@ -82,9 +82,10 @@ html.fx-cursor-on * {
            calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-right, 0px))
            0
            calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-left, 0px));
-  /* White icons that invert against the page, so they stay visible on any background */
-  color: #fff;
-  mix-blend-mode: difference;
+  /* Icon color: site.js copies the page's text color into --fx-nav-auto.
+     To force a color, set --fx-nav-color (e.g. :root { --fx-nav-color: #fff; }). */
+  color: var(--fx-nav-color, var(--fx-nav-auto, #000));
+  transition: color 0.3s ease;
   /* The bar itself never blocks clicks on the page; only the icons do */
   pointer-events: none;
 }
@@ -192,6 +193,7 @@ html.fx-cursor-on * {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .fx-nav,
   .fx-burger span,
   .fx-menu,
   .fx-menu.fx-open {

@@ -5,8 +5,7 @@
 
   // ===========================================================================
   // 1) NAVIGATION BAR - fixed to the top: logo placeholder on the left,
-  //    hamburger on the right. Its icons are white and invert against whatever
-  //    is behind them (same idea as the cursor), so they never disappear.
+  //    hamburger on the right. The icons use the page's own text color.
   // ===========================================================================
 
   // Pages listed in the hamburger menu. Add more like: { label: "Work", href: "/work" }
@@ -21,7 +20,7 @@
       return e;
     }
 
-    // --- colors/fonts for the menu panel, copied from the page when it opens ---
+    // --- colors/font copied from the page: used by the icons and the menu panel ---
     function parseColor(str) {
       if (!str || str.indexOf("color(") === 0) return null;
       var n = str.match(/[\d.]+/g);
@@ -40,7 +39,7 @@
     }
     function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
 
-    function paintMenu() {
+    function paintLook() {
       var bg = { r: 255, g: 255, b: 255 };
       var spots = [".backdrop", ".page", ".pages", ".content", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
@@ -52,6 +51,7 @@
       var cs = getComputedStyle(sample);
       var fg = parseColor(cs.color);
       if (!fg || contrast(fg, bg) < 3) fg = lum(bg) > 0.4 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
+      nav.style.setProperty("--fx-nav-auto", rgb(fg));
       menu.style.setProperty("--fx-menu-bg", rgb(bg));
       menu.style.setProperty("--fx-menu-fg", rgb(fg));
       if (cs.fontFamily) menu.style.setProperty("--fx-menu-font", cs.fontFamily);
@@ -66,7 +66,7 @@
     logo.setAttribute("aria-label", "Home");
     // Logo placeholder: an outlined box with a cross. Swap for the real logo later.
     logo.innerHTML =
-      '<svg data-fx-reflect viewBox="0 0 60 33" preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+      '<svg viewBox="0 0 60 33" preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
       '<rect x="1" y="1" width="58" height="31" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>' +
       '<path d="M1 1L59 32M59 1L1 32" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>' +
       '</svg>';
@@ -76,7 +76,7 @@
     burger.setAttribute("aria-label", "Open menu");
     burger.setAttribute("aria-expanded", "false");
     burger.setAttribute("aria-controls", "fx-menu");
-    burger.innerHTML = '<span class="fx-burger" data-fx-reflect><span></span><span></span><span></span></span>';
+    burger.innerHTML = '<span class="fx-burger"><span></span><span></span><span></span></span>';
 
     nav.appendChild(logo);
     nav.appendChild(burger);
@@ -100,7 +100,7 @@
     function setOpen(on) {
       if (on === open) return;
       open = on;
-      if (on) paintMenu();
+      if (on) paintLook();
       menu.classList.toggle("fx-open", on);
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
@@ -116,8 +116,20 @@
       if (open && e.key === "Escape") { setOpen(false); burger.focus(); }
     });
 
+    // Pick up the page's colors BEFORE inserting the bar, so its very first paint is
+    // already the right color (otherwise the icons would fade in from black).
+    paintLook();
     document.body.appendChild(nav);
     document.body.appendChild(menu);
+
+    // Then keep in step: once everything has loaded, and whenever Cargo swaps the
+    // page content (the text/background colors can differ from page to page).
+    window.addEventListener("load", paintLook);
+    var settle = 0;
+    new MutationObserver(function () {
+      clearTimeout(settle);
+      settle = setTimeout(paintLook, 250);
+    }).observe(document.body, { childList: true, subtree: true });
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -198,8 +210,6 @@
         if (el === document.documentElement || el === document.body) continue;
         // Images and video: the whole picture counts
         if (isRealMedia(el)) return true;
-        // The nav's logo and hamburger icons (marked in the nav code below)
-        if (el.hasAttribute && el.hasAttribute("data-fx-reflect")) return true;
         for (var n = el.firstChild; n; n = n.nextSibling) {
           if (n.nodeType === 3 && n.nodeValue.trim() && textHit(n, px, py)) return true;
         }
@@ -252,7 +262,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v14 loaded");
+    console.log("[fx] navigation + cursor v15 loaded");
     whenStyled(fxNav);
     fxCursor();
   }
