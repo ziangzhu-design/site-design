@@ -132,7 +132,7 @@ html {
   outline-offset: -2px;
 }
 
-/* Hamburger: three lines */
+/* Hamburger: three lines, turns into an X while open */
 .fx-burger {
   display: flex;
   flex-direction: column;
@@ -144,10 +144,21 @@ html {
   display: block;
   height: calc(var(--fx-icon-w) * 0.11);
   background: currentColor;
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.2s ease;
+}
+.fx-nav-burger[aria-expanded="true"] .fx-burger span:nth-child(1) {
+  transform: translateY(calc(var(--fx-icon-w) * 0.22)) rotate(45deg) scaleX(0.72);
+}
+.fx-nav-burger[aria-expanded="true"] .fx-burger span:nth-child(2) {
+  opacity: 0;
+}
+.fx-nav-burger[aria-expanded="true"] .fx-burger span:nth-child(3) {
+  transform: translateY(calc(var(--fx-icon-w) * -0.22)) rotate(-45deg) scaleX(0.72);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx-nav {
+  .fx-nav,
+  .fx-burger span {
     transition: none;
   }
 }

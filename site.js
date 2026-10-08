@@ -5,8 +5,9 @@
 
   // ===========================================================================
   // 1) NAVIGATION BAR - fixed to the top, hamburger on the right. The hamburger's color
-  //    follows the page's background color. It doesn't open anything yet: the menu is still
-  //    being designed (the earlier dropdown is in the git history, commit f145fa0).
+  //    follows the page's background color. Clicking it turns it into an X and back, but it
+  //    doesn't open a menu yet: the menu is still being designed (the earlier dropdown is in
+  //    the git history, commit f145fa0).
   // ===========================================================================
 
   // Hamburger color for each page background color. A background that is not listed here
@@ -146,10 +147,27 @@
 
     var burger = mk("button", "fx-nav-burger");
     burger.type = "button";
-    burger.setAttribute("aria-label", "Menu");
+    burger.setAttribute("aria-label", "Open menu");
+    burger.setAttribute("aria-expanded", "false");
     burger.innerHTML = '<span class="fx-burger" data-fx-reflect><span></span><span></span><span></span></span>';
 
     nav.appendChild(burger);
+
+    // --- open / close: the icon changes between the hamburger and an X ---
+    var open = false;
+    function setOpen(on) {
+      if (on === open) return;
+      open = on;
+      burger.setAttribute("aria-expanded", on ? "true" : "false");
+      burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
+    }
+    burger.addEventListener("click", function () { setOpen(!open); });
+    document.addEventListener("click", function (e) {
+      if (open && !burger.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (open && e.key === "Escape") { setOpen(false); burger.focus(); }
+    });
 
     document.body.appendChild(nav);
 
@@ -295,7 +313,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v22 loaded");
+    console.log("[fx] navigation + cursor v23 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
