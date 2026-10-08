@@ -65,6 +65,17 @@ html.fx-cursor-on * {
   --fx-icon-h: calc(var(--fx-icon-w) * 0.55);
   --fx-nav-pad: clamp(20px, 3vw, 60px);    /* screen edge to icon */
   --fx-nav-hit: 14px;                      /* extra tappable area around the icon */
+  --fx-nav-gutter: var(--fx-nav-h);        /* empty space kept under the bar, above the page content */
+}
+
+/* Gutter under the bar: page content starts below the bar instead of behind it, so it never
+   crowds the hamburger. Cargo sets an inline margin-top on .pages, hence !important. */
+.pages {
+  margin-top: var(--fx-nav-gutter) !important;
+}
+/* Jumping to a page anchor also leaves the gutter above the content */
+html {
+  scroll-padding-top: var(--fx-nav-gutter);
 }
 
 .fx-nav {
@@ -201,5 +212,8 @@ html.fx-cursor-on * {
   .fx-nav,
   .fx-menu {
     display: none;
+  }
+  .pages {
+    margin-top: 0 !important;
   }
 }
