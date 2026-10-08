@@ -4,8 +4,20 @@
   window.__fxLoaded = true;
 
   // ===========================================================================
-  // 1) NAVIGATION BAR - fixed to the top, white hamburger on the right.
+  // 1) NAVIGATION BAR - fixed to the top, hamburger on the right. The hamburger's color
+  //    follows the page's background color.
   // ===========================================================================
+
+  // Hamburger color for each page background color. A background that is not listed here
+  // keeps the default white.
+  var HAMBURGER_COLORS = [
+    { page: "#5E6B4E", icon: "#D6C6B0" },
+    { page: "#D6C6B0", icon: "#5E6B4E" },
+    { page: "#2B2A28", icon: "#A0522D" },
+    { page: "#A0522D", icon: "#2B2A28" }
+  ];
+  var DEFAULT_HAMBURGER = "#FFFFFF";
+  var COLOR_TOLERANCE = 8;   // how far off (in RGB steps) a page color may be and still count as a match
 
   // Pages listed in the hamburger menu. Add more like: { label: "Work", href: "/work" }
   var NAV_LINKS = [
@@ -19,7 +31,7 @@
       return e;
     }
 
-    // --- the menu panel copies the page's background, text color and font ---
+    // --- reading colors from the page ---
     function parseColor(str) {
       if (!str || str.indexOf("color(") === 0) return null;
       var n = str.match(/[\d.]+/g);
@@ -37,15 +49,57 @@
       return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     }
     function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
+    function fromHex(h) {
+      var n = parseInt(h.slice(1), 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
 
-    function paintMenu() {
-      var bg = { r: 255, g: 255, b: 255 };
+    // The page's background color. Checked from the page-specific background layer Cargo draws
+    // (.backdrop) down to the body; of several matching elements the last one wins (it is
+    // painted on top), and one that is hidden or doesn't reach the hamburger is ignored.
+    // null if no background color is found.
+    function pageBackground() {
+      var r = burger.getBoundingClientRect();
+      var px = r.left + r.width / 2, py = r.top + r.height / 2;
       var spots = [".backdrop", ".page", ".pages", ".content", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
-        var host = document.querySelector(spots[i]);
-        var c = host && parseColor(getComputedStyle(host).backgroundColor);
-        if (c && c.a > 0.5) { bg = c; break; }
+        var hosts = document.querySelectorAll(spots[i]);
+        for (var j = hosts.length - 1; j >= 0; j--) {
+          var cs = getComputedStyle(hosts[j]);
+          var c = parseColor(cs.backgroundColor);
+          if (!c || c.a <= 0.5 || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) continue;
+          if (spots[i] !== "body" && spots[i] !== "html") {
+            var b = hosts[j].getBoundingClientRect();
+            if (px < b.left || px > b.right || py < b.top || py > b.bottom) continue;
+          }
+          return c;
+        }
       }
+      return null;
+    }
+
+    // --- hamburger color: the partner of the page background in HAMBURGER_COLORS ---
+    function hamburgerFor(bg) {
+      for (var i = 0; i < HAMBURGER_COLORS.length; i++) {
+        var p = fromHex(HAMBURGER_COLORS[i].page);
+        var d = Math.sqrt(Math.pow(p.r - bg.r, 2) + Math.pow(p.g - bg.g, 2) + Math.pow(p.b - bg.b, 2));
+        if (d <= COLOR_TOLERANCE) return HAMBURGER_COLORS[i].icon;
+      }
+      return DEFAULT_HAMBURGER;
+    }
+    var lastIcon = "";
+    function refreshHamburger() {
+      if (document.hidden) return;
+      var bg = pageBackground();
+      var icon = bg ? hamburgerFor(bg) : DEFAULT_HAMBURGER;
+      if (icon === lastIcon) return;
+      lastIcon = icon;
+      nav.style.setProperty("--fx-nav-auto", icon);
+    }
+
+    // --- the menu panel copies the page's background, text color and font ---
+    function paintMenu() {
+      var bg = pageBackground() || { r: 255, g: 255, b: 255 };
       var sample = document.querySelector("[class^='cmtext'], [class^='cmtitle'], [class*=' cmtext'], [class*=' cmtitle']") || document.body;
       var cs = getComputedStyle(sample);
       var fg = parseColor(cs.color);
@@ -105,6 +159,18 @@
 
     document.body.appendChild(nav);
     document.body.appendChild(menu);
+
+    // The first color is applied without a fade, so the bar never flashes in the wrong color.
+    nav.classList.add("fx-nav-still");
+    refreshHamburger();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { nav.classList.remove("fx-nav-still"); });
+    });
+
+    // Cargo changes the background without telling us (page swaps, fades), so keep checking.
+    window.addEventListener("load", refreshHamburger);
+    document.addEventListener("visibilitychange", refreshHamburger);
+    setInterval(refreshHamburger, 400);
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -237,7 +303,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v17 loaded");
+    console.log("[fx] navigation + cursor v18 loaded");
     whenStyled(fxNav);
     fxCursor();
   }

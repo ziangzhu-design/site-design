@@ -7,7 +7,9 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
 - `site.js` - behavior
 
 ## What's in it
-- **Navigation bar** - fixed to the top with a white hamburger on the right. The hamburger
+- **Navigation bar** - fixed to the top with a hamburger on the right. The hamburger's color
+  follows the page background (`HAMBURGER_COLORS` at the top of `site.js`: olive page ->
+  tan, tan -> olive, near-black -> sienna, sienna -> near-black; any other background stays white). The hamburger
   opens a small menu whose links are the `NAV_LINKS` list at the top of `site.js`.
   (A small logo on the left was tried and taken out for now; it is in the history at
   commit `e5f98c9`, including `assets/logo.png`.)

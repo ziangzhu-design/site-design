@@ -82,10 +82,18 @@ html.fx-cursor-on * {
            calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-right, 0px))
            0
            calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-left, 0px));
-  /* The hamburger is white. To change it: :root { --fx-nav-color: #000; } */
-  color: var(--fx-nav-color, #fff);
+  /* Hamburger color: site.js picks it from the page background (HAMBURGER_COLORS in site.js)
+     and writes it to --fx-nav-auto; white when the background isn't listed.
+     To force one color instead: :root { --fx-nav-color: #000; } */
+  color: var(--fx-nav-color, var(--fx-nav-auto, #fff));
+  transition: color 0.3s ease;
   /* The bar itself never blocks clicks on the page; only the icons do */
   pointer-events: none;
+}
+
+/* No fade for the very first color, so the bar never flashes in the wrong one */
+.fx-nav.fx-nav-still {
+  transition: none;
 }
 
 .fx-nav button {
@@ -182,6 +190,7 @@ html.fx-cursor-on * {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .fx-nav,
   .fx-burger span,
   .fx-menu,
   .fx-menu.fx-open {
