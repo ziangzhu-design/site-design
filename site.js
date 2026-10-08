@@ -4,21 +4,8 @@
   window.__fxLoaded = true;
 
   // ===========================================================================
-  // 1) NAVIGATION BAR - fixed to the top: small logo on the left, white
-  //    hamburger on the right.
+  // 1) NAVIGATION BAR - fixed to the top, white hamburger on the right.
   // ===========================================================================
-
-  // The logo image sits next to this script (assets/logo.png), so a link pinned to a
-  // commit always loads the logo from that same commit. Captured now, while the
-  // script is running, because document.currentScript is empty later on.
-  function findLogoUrl() {
-    var el = document.currentScript || document.querySelector("script[src*='site-design'][src*='site.js']");
-    try {
-      if (el && el.src) return new URL("assets/logo.png", el.src).href;
-    } catch (e) { /* fall through */ }
-    return "https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@main/assets/logo.png";
-  }
-  var LOGO_URL = findLogoUrl();
 
   // Pages listed in the hamburger menu. Add more like: { label: "Work", href: "/work" }
   var NAV_LINKS = [
@@ -72,17 +59,6 @@
     var nav = mk("nav", "fx-nav");
     nav.setAttribute("aria-label", "Main");
 
-    var logo = mk("a", "fx-nav-logo");
-    logo.href = "/";
-    logo.setAttribute("aria-label", "Home");
-    // The link already says "Home" for screen readers, so the picture itself has no alt text.
-    var logoImg = mk("img");
-    logoImg.src = LOGO_URL;
-    logoImg.alt = "";
-    logoImg.draggable = false;
-    logoImg.addEventListener("error", function () { logoImg.style.visibility = "hidden"; });
-    logo.appendChild(logoImg);
-
     var burger = mk("button", "fx-nav-burger");
     burger.type = "button";
     burger.setAttribute("aria-label", "Open menu");
@@ -90,7 +66,6 @@
     burger.setAttribute("aria-controls", "fx-menu");
     burger.innerHTML = '<span class="fx-burger"><span></span><span></span><span></span></span>';
 
-    nav.appendChild(logo);
     nav.appendChild(burger);
 
     // --- build the menu panel ---
@@ -196,7 +171,7 @@
     // A real, visible picture - not a page-sized backdrop/background layer
     function isRealMedia(el) {
       if (!MEDIA.test(el.tagName)) return false;
-      if (el.closest && el.closest(".backdrop, .fx-nav")) return false;
+      if (el.closest && el.closest(".backdrop")) return false;
       var r = el.getBoundingClientRect();
       if (r.width >= window.innerWidth * 0.95 && r.height >= window.innerHeight * 0.95) return false;
       if (parseFloat(getComputedStyle(el).opacity) < 0.05) return false;
@@ -262,7 +237,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v16 loaded");
+    console.log("[fx] navigation + cursor v17 loaded");
     whenStyled(fxNav);
     fxCursor();
   }

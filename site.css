@@ -55,17 +55,16 @@ html.fx-cursor-on * {
 }
 
 /* ===================================================================
-   Navigation bar - fixed at the top, logo left, hamburger right.
+   Navigation bar - fixed at the top, hamburger on the right.
    Sizes follow the reference: icons are 3% of the window width (32-60px),
    the bar is 6% (64-120px), margins to the screen edge match the icon width.
    =================================================================== */
 :root {
   --fx-nav-h: clamp(64px, 6vw, 120px);     /* bar height */
-  --fx-icon-w: clamp(32px, 3vw, 60px);     /* logo and hamburger width */
+  --fx-icon-w: clamp(32px, 3vw, 60px);     /* hamburger width */
   --fx-icon-h: calc(var(--fx-icon-w) * 0.55);
   --fx-nav-pad: clamp(20px, 3vw, 60px);    /* screen edge to icon */
-  --fx-nav-hit: 14px;                      /* extra tappable area around each icon */
-  --fx-logo-size: clamp(24px, calc(var(--fx-icon-w) * 0.62), 40px);  /* the logo is small on purpose */
+  --fx-nav-hit: 14px;                      /* extra tappable area around the icon */
 }
 
 .fx-nav {
@@ -76,7 +75,7 @@ html.fx-cursor-on * {
   z-index: 2147483000;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;               /* hamburger on the right */
   box-sizing: border-box;
   height: var(--fx-nav-h);
   padding: env(safe-area-inset-top, 0px)
@@ -89,7 +88,6 @@ html.fx-cursor-on * {
   pointer-events: none;
 }
 
-.fx-nav a,
 .fx-nav button {
   all: unset;
   box-sizing: content-box;
@@ -101,20 +99,9 @@ html.fx-cursor-on * {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-.fx-nav a:focus-visible,
 .fx-nav button:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: -2px;
-}
-
-/* Logo (assets/logo.png) */
-.fx-nav-logo img {
-  display: block;
-  width: var(--fx-logo-size);
-  height: var(--fx-logo-size);
-  object-fit: contain;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 /* Hamburger: three lines, turns into an X while the menu is open */
