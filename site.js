@@ -119,7 +119,7 @@
     burger.setAttribute("aria-label", "Open menu");
     burger.setAttribute("aria-expanded", "false");
     burger.setAttribute("aria-controls", "fx-menu");
-    burger.innerHTML = '<span class="fx-burger"><span></span><span></span><span></span></span>';
+    burger.innerHTML = '<span class="fx-burger" data-fx-reflect><span></span><span></span><span></span></span>';
 
     nav.appendChild(burger);
 
@@ -252,6 +252,8 @@
         if (el === document.documentElement || el === document.body) continue;
         // Images and video: the whole picture counts
         if (isRealMedia(el)) return true;
+        // The hamburger icon (marked data-fx-reflect in the nav code above)
+        if (el.hasAttribute && el.hasAttribute("data-fx-reflect")) return true;
         for (var n = el.firstChild; n; n = n.nextSibling) {
           if (n.nodeType === 3 && n.nodeValue.trim() && textHit(n, px, py)) return true;
         }
@@ -304,7 +306,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v19 loaded");
+    console.log("[fx] navigation + cursor v20 loaded");
     whenStyled(fxNav);
     fxCursor();
   }
