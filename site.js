@@ -23,7 +23,25 @@
 
   // --- reading colors from the page (shared by the bar and the background matching) ---
   function parseColor(str) {
-    if (!str || str.indexOf("color(") === 0) return null;
+    if (!str) return null;
+    if (!/^rgba?\(/.test(str)) {
+      // oklch(), lab(), color(), color-mix() ...: let a 1x1 canvas turn it into plain sRGB numbers
+      try {
+        if (!parseColor.cx) {
+          var cv = document.createElement("canvas");
+          cv.width = cv.height = 1;
+          parseColor.cx = cv.getContext("2d", { willReadFrequently: true });
+        }
+        var cx = parseColor.cx;
+        cx.clearRect(0, 0, 1, 1);
+        cx.fillStyle = "#010203";
+        cx.fillStyle = str;
+        if (cx.fillStyle === "#010203") return null;   // not understood
+        cx.fillRect(0, 0, 1, 1);
+        var d = cx.getImageData(0, 0, 1, 1).data;
+        return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 };
+      } catch (e) { return null; }
+    }
     var n = str.match(/[\d.]+/g);
     if (!n || n.length < 3) return null;
     var a = n.length > 3 ? parseFloat(n[3]) : 1;
@@ -32,8 +50,18 @@
   }
   function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
   function fromHex(h) {
-    var n = parseInt(h.slice(1), 16);
+    h = String(h).replace(/^#/, "");
+    if (h.length === 3) h = h.replace(/./g, "$&$&");
+    var n = parseInt(h, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  // True when an element, or anything around it, is faded out (a page that is fading away)
+  function fadedOut(el) {
+    for (var e = el; e && e.nodeType === 1; e = e.parentElement) {
+      if (parseFloat(getComputedStyle(e).opacity) < 0.05) return true;
+    }
+    return false;
   }
 
   // The site wallpaper's color, wherever the wallpaper sits (Cargo draws the site background
@@ -43,7 +71,7 @@
     for (var j = hosts.length - 1; j >= 0; j--) {
       var cs = getComputedStyle(hosts[j]);
       var c = parseColor(cs.backgroundColor);
-      if (c && c.a > 0.5 && cs.visibility !== "hidden" && parseFloat(cs.opacity) >= 0.05) return c;
+      if (c && c.a > 0.5 && cs.visibility !== "hidden" && !fadedOut(hosts[j])) return c;
     }
     return null;
   }
@@ -112,7 +140,7 @@
         for (var j = hosts.length - 1; j >= 0; j--) {
           var cs = getComputedStyle(hosts[j]);
           var c = parseColor(cs.backgroundColor);
-          if (!c || c.a <= 0.5 || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) continue;
+          if (!c || c.a <= 0.5 || cs.visibility === "hidden" || fadedOut(hosts[j])) continue;
           if (spots[i] !== "body" && spots[i] !== "html") {
             var b = hosts[j].getBoundingClientRect();
             if (px < b.left || px > b.right || py < b.top || py > b.bottom) continue;
@@ -172,11 +200,20 @@
     document.body.appendChild(nav);
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
+    // The page itself may still be arriving (this script runs before it), so stay in that
+    // "no fade" mode until it has been parsed, then look once more before fading is allowed.
     nav.classList.add("fx-nav-still");
     refreshHamburger();
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { nav.classList.remove("fx-nav-still"); });
-    });
+    function endStill() {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { nav.classList.remove("fx-nav-still"); });
+      });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () { refreshHamburger(); endStill(); });
+    } else {
+      endStill();
+    }
 
     refreshNav = refreshHamburger;   // from now on the shared checker keeps the hamburger in step
   }
@@ -408,7 +445,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v26 loaded");
+    console.log("[fx] navigation + cursor v27 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

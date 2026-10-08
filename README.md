@@ -7,14 +7,14 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
 - `site.js` - behavior
 
 ## What's in it
-- **Navigation bar** - fixed to the top with a hamburger on the right. The hamburger's color
-  follows the page background (`HAMBURGER_COLORS` at the top of `site.js`: olive page ->
-  tan, tan -> olive, near-black -> sienna, sienna -> near-black; any other background stays
-  white). Clicking it turns it into an X and back (Escape or a click elsewhere also
-  closes it), but it does not open a menu for now - the menu is still being designed (the
-  earlier dropdown is in the history at commit `f145fa0`).
-  The page content starts below the bar (a small gutter), and the page background behind that
-  gutter is matched to Cargo's wallpaper color.
+- **Navigation bar** - fixed to the top with a hamburger on the right. The hamburger changes
+  color to stand out from the page background (the list is `HAMBURGER_COLORS` at the top of
+  `site.js`): olive page -> tan hamburger, tan page -> olive hamburger, near-black page ->
+  sienna hamburger, sienna page -> near-black hamburger. Any other background keeps it white.
+  Clicking it turns it into an X and back (Escape or a click elsewhere also closes it), but it
+  does not open a menu for now - the menu is still being designed (the earlier dropdown is in
+  the history at commit `f145fa0`). The page content starts below the bar (a small gutter), and
+  the page background behind that gutter is matched to Cargo's wallpaper color.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, the clock, the hamburger and horizontal rules. Over
   expandable images (where the browser would show its zoom-in / zoom-out cursor) it morphs into
