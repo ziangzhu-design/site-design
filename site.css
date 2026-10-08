@@ -73,6 +73,13 @@ html.fx-cursor-on * {
 .pages {
   margin-top: var(--fx-nav-gutter) !important;
 }
+/* The strip above the content (the gutter) shows the page itself, not the wallpaper, which
+   moves down with the content. site.js copies the wallpaper's color into --fx-wallpaper so the
+   strip matches it, whatever the color is. */
+html.fx-bg-matched,
+html.fx-bg-matched body {
+  background-color: var(--fx-wallpaper) !important;
+}
 /* Jumping to a page anchor also leaves the gutter above the content */
 html {
   scroll-padding-top: var(--fx-nav-gutter);

@@ -24,6 +24,79 @@
     { label: "Home", href: "/" }
   ];
 
+  // --- reading colors from the page (shared by the bar and the background matching) ---
+  function parseColor(str) {
+    if (!str || str.indexOf("color(") === 0) return null;
+    var n = str.match(/[\d.]+/g);
+    if (!n || n.length < 3) return null;
+    var a = n.length > 3 ? parseFloat(n[3]) : 1;
+    if (a > 1) a = a / 100;
+    return { r: +n[0], g: +n[1], b: +n[2], a: a };
+  }
+  function lum(c) {
+    function ch(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
+  }
+  function contrast(a, b) {
+    var l1 = lum(a), l2 = lum(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
+  function fromHex(h) {
+    var n = parseInt(h.slice(1), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+
+  // The site wallpaper's color, wherever the wallpaper sits (Cargo draws the site background
+  // there). Of several, the last one is painted on top; a hidden or see-through one is ignored.
+  function wallpaperColor() {
+    var hosts = document.querySelectorAll(".wallpaper");
+    for (var j = hosts.length - 1; j >= 0; j--) {
+      var cs = getComputedStyle(hosts[j]);
+      var c = parseColor(cs.backgroundColor);
+      if (c && c.a > 0.5 && cs.visibility !== "hidden" && parseFloat(cs.opacity) >= 0.05) return c;
+    }
+    return null;
+  }
+
+  // The gutter strip above the page content shows the page behind the wallpaper (plain white in
+  // Cargo), so html + body are given the wallpaper's color (site.css does the painting). It is
+  // taken away again when the wallpaper has no plain color, so Cargo's own look comes back.
+  var root = document.documentElement;
+  function matchBackground() {
+    var w = wallpaperColor();
+    if (w) {
+      var v = rgb(w);
+      if (root.style.getPropertyValue("--fx-wallpaper") !== v) root.style.setProperty("--fx-wallpaper", v);
+      if (!root.classList.contains("fx-bg-matched")) root.classList.add("fx-bg-matched");
+    } else {
+      if (root.style.getPropertyValue("--fx-wallpaper")) root.style.removeProperty("--fx-wallpaper");
+      if (root.classList.contains("fx-bg-matched")) root.classList.remove("fx-bg-matched");
+    }
+  }
+
+  // Cargo changes the page without telling us (page swaps, color fades), so keep checking:
+  // right after DOM changes, when the tab comes back, and on a steady beat for the rest.
+  var refreshNav = function () {};   // replaced once the bar exists
+  function refreshAll() {
+    if (document.hidden) return;
+    matchBackground();
+    refreshNav();
+  }
+  function keepInSync() {
+    refreshAll();
+    window.addEventListener("load", refreshAll);
+    document.addEventListener("visibilitychange", refreshAll);
+    var queued = false;
+    new MutationObserver(function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () { queued = false; refreshAll(); });
+    }).observe(document.body, { childList: true, subtree: true });
+    setInterval(refreshAll, 250);
+  }
+
   function fxNav() {
     function mk(tag, cls) {
       var e = document.createElement(tag);
@@ -31,39 +104,22 @@
       return e;
     }
 
-    // --- reading colors from the page ---
-    function parseColor(str) {
-      if (!str || str.indexOf("color(") === 0) return null;
-      var n = str.match(/[\d.]+/g);
-      if (!n || n.length < 3) return null;
-      var a = n.length > 3 ? parseFloat(n[3]) : 1;
-      if (a > 1) a = a / 100;
-      return { r: +n[0], g: +n[1], b: +n[2], a: a };
-    }
-    function lum(c) {
-      function ch(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
-      return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
-    }
-    function contrast(a, b) {
-      var l1 = lum(a), l2 = lum(b);
-      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-    }
-    function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
-    function fromHex(h) {
-      var n = parseInt(h.slice(1), 16);
-      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-    }
-
     // The page's background color. Checked from the page-specific background layer Cargo draws
-    // (.backdrop), through its page wrappers and its full-window ".wallpaper" layer (where the
-    // site's background color actually lives), down to the body (plain white on this site).
+    // (.backdrop), through its page wrappers and the site ".wallpaper" (where the site's
+    // background color actually lives), down to the body (plain white on this site).
     // Of several matching elements the last one wins (it is painted on top), and one that is
-    // hidden or doesn't reach the hamburger is ignored. null if no color is found.
+    // hidden or doesn't reach the hamburger is ignored. The wallpaper counts wherever it sits.
+    // null if no color is found.
     function pageBackground() {
       var r = burger.getBoundingClientRect();
       var px = r.left + r.width / 2, py = r.top + r.height / 2;
       var spots = [".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
+        if (spots[i] === ".wallpaper") {
+          var wc = wallpaperColor();
+          if (wc) return wc;
+          continue;
+        }
         var hosts = document.querySelectorAll(spots[i]);
         for (var j = hosts.length - 1; j >= 0; j--) {
           var cs = getComputedStyle(hosts[j]);
@@ -90,7 +146,6 @@
     }
     var lastIcon = "";
     function refreshHamburger() {
-      if (document.hidden) return;
       var bg = pageBackground();
       var icon = bg ? hamburgerFor(bg) : DEFAULT_HAMBURGER;
       if (icon === lastIcon) return;
@@ -168,10 +223,7 @@
       requestAnimationFrame(function () { nav.classList.remove("fx-nav-still"); });
     });
 
-    // Cargo changes the background without telling us (page swaps, fades), so keep checking.
-    window.addEventListener("load", refreshHamburger);
-    document.addEventListener("visibilitychange", refreshHamburger);
-    setInterval(refreshHamburger, 400);
+    refreshNav = refreshHamburger;   // from now on the shared checker keeps the hamburger in step
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -306,7 +358,8 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v20 loaded");
+    console.log("[fx] navigation + cursor v21 loaded");
+    keepInSync();
     whenStyled(fxNav);
     fxCursor();
   }
