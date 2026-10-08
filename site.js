@@ -304,13 +304,49 @@
     // moment we lift it on the element under the pointer and its ancestors (the data-fx-probe
     // attribute, see site.css), read what the page itself asks for, and put it back - all in one
     // go, so the browser never paints the real cursor. The answer is remembered briefly.
+    //
+    // Cargo's own components (the gallery, the columns, the clock) keep part of their content in
+    // a "shadow" layer that the page's stylesheet can't reach: neither to hide the real cursor
+    // nor to be seen by ordinary lookups. So we look inside open shadow layers explicitly, and
+    // give each one we meet the same "hide the real cursor" rule (closed ones can't be entered).
     var ZOOM = /\bzoom-(in|out)\b/;
     var probed = new WeakMap();
+
+    var hideSheet = null, hiddenIn = new WeakSet();
+    function hideRealCursorIn(root) {
+      if (hiddenIn.has(root)) return;
+      hiddenIn.add(root);
+      var rule = "*:not([data-fx-probe]) { cursor: none !important; }";
+      try {
+        if (!hideSheet) { hideSheet = new CSSStyleSheet(); hideSheet.replaceSync(rule); }
+        root.adoptedStyleSheets = root.adoptedStyleSheets.concat([hideSheet]);
+      } catch (e) {   // older browsers: a plain <style> inside the layer does the same job
+        var st = document.createElement("style");
+        st.textContent = rule;
+        root.appendChild(st);
+      }
+    }
+    // The next element outwards, stepping out of a shadow layer onto its host
+    function outwards(el) {
+      return el.parentElement || (el.getRootNode && el.getRootNode().host) || null;
+    }
+    // The innermost element under the pointer, looking inside open shadow layers
+    function deepestAt(px, py) {
+      var el = document.elementFromPoint(px, py);
+      for (var d = 0; el && el.shadowRoot && d < 6; d++) {
+        hideRealCursorIn(el.shadowRoot);
+        var inner = el.shadowRoot.elementFromPoint(px, py);
+        if (!inner || inner === el) break;
+        el = inner;
+      }
+      return el;
+    }
+
     function pageWantsZoom(el) {
       var now = performance.now(), hit = probed.get(el);
       if (hit && now - hit.at < 600) return hit.zoom;
       var chain = [], n;
-      for (n = el; n && n.nodeType === 1; n = n.parentElement) chain.push(n);
+      for (n = el; n && n.nodeType === 1; n = outwards(n)) chain.push(n);
       for (var i = 0; i < chain.length; i++) chain[i].setAttribute("data-fx-probe", "");
       var cursor = getComputedStyle(el).cursor;
       for (var k = 0; k < chain.length; k++) chain[k].removeAttribute("data-fx-probe");
@@ -320,9 +356,11 @@
     }
 
     // Everything the ball reacts to, worked out for the element under the pointer
-    function updateState(t) {
+    function updateState() {
+      var t = deepestAt(x, y), clickable = false;
+      for (var n = t; n && !clickable; n = outwards(n)) clickable = !!(n.matches && n.matches(CLICKABLE));
       document.documentElement.classList.toggle("fx-over-text", overText(x, y));
-      setClass("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
+      setClass("fx-link", clickable);
       setClass("fx-zoom", !!(t && t.nodeType === 1 && pageWantsZoom(t)));
     }
 
@@ -334,7 +372,7 @@
       clearTimeout(lookAgain);
       lookAgain = setTimeout(function () {
         probed = new WeakMap();
-        updateState(document.elementFromPoint(x, y));
+        updateState();
       }, 120);
     }
 
@@ -357,7 +395,7 @@
         setClass("fx-visible", true);
         frame();
       }
-      updateState(e.target);
+      updateState();
     }, { passive: true });
     document.addEventListener("click", function () { lookAgainSoon(); setTimeout(lookAgainSoon, 450); }, true);
     window.addEventListener("scroll", lookAgainSoon, { passive: true, capture: true });
@@ -370,7 +408,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v25 loaded");
+    console.log("[fx] navigation + cursor v26 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
