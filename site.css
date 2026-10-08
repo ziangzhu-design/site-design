@@ -65,6 +65,7 @@ html.fx-cursor-on * {
   --fx-icon-h: calc(var(--fx-icon-w) * 0.55);
   --fx-nav-pad: clamp(20px, 3vw, 60px);    /* screen edge to icon */
   --fx-nav-hit: 14px;                      /* extra tappable area around each icon */
+  --fx-logo-size: clamp(24px, calc(var(--fx-icon-w) * 0.62), 40px);  /* the logo is small on purpose */
 }
 
 .fx-nav {
@@ -82,10 +83,8 @@ html.fx-cursor-on * {
            calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-right, 0px))
            0
            calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-left, 0px));
-  /* Icon color: site.js copies the page's text color into --fx-nav-auto.
-     To force a color, set --fx-nav-color (e.g. :root { --fx-nav-color: #fff; }). */
-  color: var(--fx-nav-color, var(--fx-nav-auto, #000));
-  transition: color 0.3s ease;
+  /* The hamburger is white. To change it: :root { --fx-nav-color: #000; } */
+  color: var(--fx-nav-color, #fff);
   /* The bar itself never blocks clicks on the page; only the icons do */
   pointer-events: none;
 }
@@ -108,11 +107,14 @@ html.fx-cursor-on * {
   outline-offset: -2px;
 }
 
-/* Logo placeholder */
-.fx-nav-logo svg {
+/* Logo (assets/logo.png) */
+.fx-nav-logo img {
   display: block;
-  width: var(--fx-icon-w);
-  height: var(--fx-icon-h);
+  width: var(--fx-logo-size);
+  height: var(--fx-logo-size);
+  object-fit: contain;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Hamburger: three lines, turns into an X while the menu is open */
@@ -193,7 +195,6 @@ html.fx-cursor-on * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx-nav,
   .fx-burger span,
   .fx-menu,
   .fx-menu.fx-open {

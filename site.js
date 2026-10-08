@@ -4,9 +4,21 @@
   window.__fxLoaded = true;
 
   // ===========================================================================
-  // 1) NAVIGATION BAR - fixed to the top: logo placeholder on the left,
-  //    hamburger on the right. The icons use the page's own text color.
+  // 1) NAVIGATION BAR - fixed to the top: small logo on the left, white
+  //    hamburger on the right.
   // ===========================================================================
+
+  // The logo image sits next to this script (assets/logo.png), so a link pinned to a
+  // commit always loads the logo from that same commit. Captured now, while the
+  // script is running, because document.currentScript is empty later on.
+  function findLogoUrl() {
+    var el = document.currentScript || document.querySelector("script[src*='site-design'][src*='site.js']");
+    try {
+      if (el && el.src) return new URL("assets/logo.png", el.src).href;
+    } catch (e) { /* fall through */ }
+    return "https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@main/assets/logo.png";
+  }
+  var LOGO_URL = findLogoUrl();
 
   // Pages listed in the hamburger menu. Add more like: { label: "Work", href: "/work" }
   var NAV_LINKS = [
@@ -20,7 +32,7 @@
       return e;
     }
 
-    // --- colors/font copied from the page: used by the icons and the menu panel ---
+    // --- the menu panel copies the page's background, text color and font ---
     function parseColor(str) {
       if (!str || str.indexOf("color(") === 0) return null;
       var n = str.match(/[\d.]+/g);
@@ -39,7 +51,7 @@
     }
     function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
 
-    function paintLook() {
+    function paintMenu() {
       var bg = { r: 255, g: 255, b: 255 };
       var spots = [".backdrop", ".page", ".pages", ".content", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
@@ -51,7 +63,6 @@
       var cs = getComputedStyle(sample);
       var fg = parseColor(cs.color);
       if (!fg || contrast(fg, bg) < 3) fg = lum(bg) > 0.4 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
-      nav.style.setProperty("--fx-nav-auto", rgb(fg));
       menu.style.setProperty("--fx-menu-bg", rgb(bg));
       menu.style.setProperty("--fx-menu-fg", rgb(fg));
       if (cs.fontFamily) menu.style.setProperty("--fx-menu-font", cs.fontFamily);
@@ -64,12 +75,13 @@
     var logo = mk("a", "fx-nav-logo");
     logo.href = "/";
     logo.setAttribute("aria-label", "Home");
-    // Logo placeholder: an outlined box with a cross. Swap for the real logo later.
-    logo.innerHTML =
-      '<svg viewBox="0 0 60 33" preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-      '<rect x="1" y="1" width="58" height="31" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>' +
-      '<path d="M1 1L59 32M59 1L1 32" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>' +
-      '</svg>';
+    // The link already says "Home" for screen readers, so the picture itself has no alt text.
+    var logoImg = mk("img");
+    logoImg.src = LOGO_URL;
+    logoImg.alt = "";
+    logoImg.draggable = false;
+    logoImg.addEventListener("error", function () { logoImg.style.visibility = "hidden"; });
+    logo.appendChild(logoImg);
 
     var burger = mk("button", "fx-nav-burger");
     burger.type = "button";
@@ -100,7 +112,7 @@
     function setOpen(on) {
       if (on === open) return;
       open = on;
-      if (on) paintLook();
+      if (on) paintMenu();
       menu.classList.toggle("fx-open", on);
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
@@ -116,20 +128,8 @@
       if (open && e.key === "Escape") { setOpen(false); burger.focus(); }
     });
 
-    // Pick up the page's colors BEFORE inserting the bar, so its very first paint is
-    // already the right color (otherwise the icons would fade in from black).
-    paintLook();
     document.body.appendChild(nav);
     document.body.appendChild(menu);
-
-    // Then keep in step: once everything has loaded, and whenever Cargo swaps the
-    // page content (the text/background colors can differ from page to page).
-    window.addEventListener("load", paintLook);
-    var settle = 0;
-    new MutationObserver(function () {
-      clearTimeout(settle);
-      settle = setTimeout(paintLook, 250);
-    }).observe(document.body, { childList: true, subtree: true });
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -196,7 +196,7 @@
     // A real, visible picture - not a page-sized backdrop/background layer
     function isRealMedia(el) {
       if (!MEDIA.test(el.tagName)) return false;
-      if (el.closest && el.closest(".backdrop")) return false;
+      if (el.closest && el.closest(".backdrop, .fx-nav")) return false;
       var r = el.getBoundingClientRect();
       if (r.width >= window.innerWidth * 0.95 && r.height >= window.innerHeight * 0.95) return false;
       if (parseFloat(getComputedStyle(el).opacity) < 0.05) return false;
@@ -262,7 +262,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v15 loaded");
+    console.log("[fx] navigation + cursor v16 loaded");
     whenStyled(fxNav);
     fxCursor();
   }
