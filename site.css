@@ -32,25 +32,31 @@ html.fx-over-text .fx-cursor:not(.fx-blend).fx-visible { opacity: 0; }
 .fx-cursor.fx-down .fx-cursor-inner { transform: scale(0.8); }
 .fx-cursor.fx-link.fx-down .fx-cursor-inner { transform: scale(1.5); }
 
-/* Layer 2: the white ball itself, gently breathing */
+/* Layer 2: the white ball itself, gently breathing. Over expandable images (where the browser
+   would show its zoom-in / zoom-out cursor) it morphs into a square - same breathing, same
+   inverting. */
 .fx-cursor-dot {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   background: #fff;
   animation: fx-breathe 2.4s ease-in-out infinite;
+  transition: border-radius 0.25s ease;
 }
+.fx-cursor.fx-zoom .fx-cursor-dot { border-radius: 2px; }
 @keyframes fx-breathe {
   0%, 100% { transform: scale(0.85); }
   50%      { transform: scale(1.25); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fx-cursor-dot { animation: none; }
+  .fx-cursor-dot { animation: none; transition: none; }
 }
 
-/* Hide the normal arrow only while the custom cursor is running */
-html.fx-cursor-on,
-html.fx-cursor-on * {
+/* Hide the normal arrow only while the custom cursor is running. site.js lifts this for a
+   moment (data-fx-probe) on the element under the pointer, to read which cursor the page itself
+   asks for there (zoom-in / zoom-out). */
+html.fx-cursor-on:not([data-fx-probe]),
+html.fx-cursor-on *:not([data-fx-probe]) {
   cursor: none !important;
 }
 

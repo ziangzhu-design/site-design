@@ -298,6 +298,46 @@
     var cx = x, cy = y;       // ball position (eases toward the mouse)
     var running = false;
 
+    // --- zoom cursors ---
+    // Over an expandable image (and over the image once it is open) Cargo asks the browser for
+    // its zoom-in / zoom-out cursor. Our blanket "cursor: none" hides that request too, so for a
+    // moment we lift it on the element under the pointer and its ancestors (the data-fx-probe
+    // attribute, see site.css), read what the page itself asks for, and put it back - all in one
+    // go, so the browser never paints the real cursor. The answer is remembered briefly.
+    var ZOOM = /\bzoom-(in|out)\b/;
+    var probed = new WeakMap();
+    function pageWantsZoom(el) {
+      var now = performance.now(), hit = probed.get(el);
+      if (hit && now - hit.at < 600) return hit.zoom;
+      var chain = [], n;
+      for (n = el; n && n.nodeType === 1; n = n.parentElement) chain.push(n);
+      for (var i = 0; i < chain.length; i++) chain[i].setAttribute("data-fx-probe", "");
+      var cursor = getComputedStyle(el).cursor;
+      for (var k = 0; k < chain.length; k++) chain[k].removeAttribute("data-fx-probe");
+      var zoom = ZOOM.test(cursor);
+      probed.set(el, { zoom: zoom, at: now });
+      return zoom;
+    }
+
+    // Everything the ball reacts to, worked out for the element under the pointer
+    function updateState(t) {
+      document.documentElement.classList.toggle("fx-over-text", overText(x, y));
+      setClass("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
+      setClass("fx-zoom", !!(t && t.nodeType === 1 && pageWantsZoom(t)));
+    }
+
+    // The page can change under a still pointer (an image opens, a page scrolls), so look again
+    // shortly after clicks, scrolling and key presses (e.g. Escape closing an open image).
+    var lookAgain = 0;
+    function lookAgainSoon() {
+      if (!running) return;
+      clearTimeout(lookAgain);
+      lookAgain = setTimeout(function () {
+        probed = new WeakMap();
+        updateState(document.elementFromPoint(x, y));
+      }, 120);
+    }
+
     function frame() {
       cx += (x - cx) * 0.25;
       cy += (y - cy) * 0.25;
@@ -317,10 +357,11 @@
         setClass("fx-visible", true);
         frame();
       }
-      var t = e.target;
-      document.documentElement.classList.toggle("fx-over-text", overText(x, y));
-      setClass("fx-link", !!(t && t.closest && t.closest(CLICKABLE)));
+      updateState(e.target);
     }, { passive: true });
+    document.addEventListener("click", function () { lookAgainSoon(); setTimeout(lookAgainSoon, 450); }, true);
+    window.addEventListener("scroll", lookAgainSoon, { passive: true, capture: true });
+    document.addEventListener("keyup", lookAgainSoon);
 
     document.addEventListener("mousedown", function () { setClass("fx-down", true); });
     document.addEventListener("mouseup", function () { setClass("fx-down", false); });
@@ -329,7 +370,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v24 loaded");
+    console.log("[fx] navigation + cursor v25 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
