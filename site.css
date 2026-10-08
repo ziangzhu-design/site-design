@@ -53,3 +53,154 @@ html.fx-cursor-on,
 html.fx-cursor-on * {
   cursor: none !important;
 }
+
+/* ===================================================================
+   Navigation bar - fixed at the top, logo left, hamburger right.
+   Sizes follow the reference: icons are 3% of the window width (32-60px),
+   the bar is 6% (64-120px), margins to the screen edge match the icon width.
+   =================================================================== */
+:root {
+  --fx-nav-h: clamp(64px, 6vw, 120px);     /* bar height */
+  --fx-icon-w: clamp(32px, 3vw, 60px);     /* logo and hamburger width */
+  --fx-icon-h: calc(var(--fx-icon-w) * 0.55);
+  --fx-nav-pad: clamp(20px, 3vw, 60px);    /* screen edge to icon */
+  --fx-nav-hit: 14px;                      /* extra tappable area around each icon */
+}
+
+.fx-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: var(--fx-nav-h);
+  padding: env(safe-area-inset-top, 0px)
+           calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-right, 0px))
+           0
+           calc(var(--fx-nav-pad) - var(--fx-nav-hit) + env(safe-area-inset-left, 0px));
+  /* White icons that invert against the page, so they stay visible on any background */
+  color: #fff;
+  mix-blend-mode: difference;
+  /* The bar itself never blocks clicks on the page; only the icons do */
+  pointer-events: none;
+}
+
+.fx-nav a,
+.fx-nav button {
+  all: unset;
+  box-sizing: content-box;
+  display: block;
+  padding: var(--fx-nav-hit);
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.fx-nav a:focus-visible,
+.fx-nav button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+/* Logo placeholder */
+.fx-nav-logo svg {
+  display: block;
+  width: var(--fx-icon-w);
+  height: var(--fx-icon-h);
+}
+
+/* Hamburger: three lines, turns into an X while the menu is open */
+.fx-burger {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: var(--fx-icon-w);
+  height: var(--fx-icon-h);
+}
+.fx-burger span {
+  display: block;
+  height: calc(var(--fx-icon-w) * 0.11);
+  background: currentColor;
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.2s ease;
+}
+.fx-nav-burger[aria-expanded="true"] .fx-burger span:nth-child(1) {
+  transform: translateY(calc(var(--fx-icon-w) * 0.22)) rotate(45deg) scaleX(0.72);
+}
+.fx-nav-burger[aria-expanded="true"] .fx-burger span:nth-child(2) {
+  opacity: 0;
+}
+.fx-nav-burger[aria-expanded="true"] .fx-burger span:nth-child(3) {
+  transform: translateY(calc(var(--fx-icon-w) * -0.22)) rotate(-45deg) scaleX(0.72);
+}
+
+/* Menu panel - colors and font are copied from the page when it opens */
+.fx-menu {
+  position: fixed;
+  z-index: 2147482900;
+  top: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + 14px);
+  right: var(--fx-nav-pad);
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: calc(100vw - 2 * var(--fx-nav-pad));
+  padding: 10px 0;
+  background: var(--fx-menu-bg, #fff);
+  color: var(--fx-menu-fg, #000);
+  border: 1px solid currentColor;
+  font-family: var(--fx-menu-font, system-ui, sans-serif);
+  font-size: 18px;
+  line-height: 1.3;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s linear 0.25s;
+}
+.fx-menu.fx-open {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.fx-menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fx-menu li {
+  margin: 0;
+  padding: 0;
+}
+.fx-menu a.fx-menu-link {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  padding: 10px 22px;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fx-menu a.fx-menu-link:hover,
+.fx-menu a.fx-menu-link:focus-visible {
+  background: var(--fx-menu-fg, #000);
+  color: var(--fx-menu-bg, #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-burger span,
+  .fx-menu,
+  .fx-menu.fx-open {
+    transition: none;
+  }
+}
+@media print {
+  .fx-nav,
+  .fx-menu {
+    display: none;
+  }
+}
