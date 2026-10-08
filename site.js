@@ -55,13 +55,14 @@
     }
 
     // The page's background color. Checked from the page-specific background layer Cargo draws
-    // (.backdrop) down to the body; of several matching elements the last one wins (it is
-    // painted on top), and one that is hidden or doesn't reach the hamburger is ignored.
-    // null if no background color is found.
+    // (.backdrop), through its page wrappers and its full-window ".wallpaper" layer (where the
+    // site's background color actually lives), down to the body (plain white on this site).
+    // Of several matching elements the last one wins (it is painted on top), and one that is
+    // hidden or doesn't reach the hamburger is ignored. null if no color is found.
     function pageBackground() {
       var r = burger.getBoundingClientRect();
       var px = r.left + r.width / 2, py = r.top + r.height / 2;
-      var spots = [".backdrop", ".page", ".pages", ".content", "body", "html"];
+      var spots = [".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
         var hosts = document.querySelectorAll(spots[i]);
         for (var j = hosts.length - 1; j >= 0; j--) {
@@ -303,7 +304,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v18 loaded");
+    console.log("[fx] navigation + cursor v19 loaded");
     whenStyled(fxNav);
     fxCursor();
   }
