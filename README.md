@@ -9,10 +9,11 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
 ## What's in it
 - **Navigation bar** - fixed to the top with a hamburger on the right. The hamburger's color
   follows the page background (`HAMBURGER_COLORS` at the top of `site.js`: olive page ->
-  tan, tan -> olive, near-black -> sienna, sienna -> near-black; any other background stays white). The hamburger
-  opens a small menu whose links are the `NAV_LINKS` list at the top of `site.js`.
-  (A small logo on the left was tried and taken out for now; it is in the history at
-  commit `e5f98c9`, including `assets/logo.png`.)
+  tan, tan -> olive, near-black -> sienna, sienna -> near-black; any other background stays
+  white). It does not open anything for now - the menu is still being designed (the earlier
+  dropdown, with its open/close logic and X animation, is in the history at commit `f145fa0`).
+  The page content starts below the bar (a small gutter), and the page background behind that
+  gutter is matched to Cargo's wallpaper color.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images and the clock.
 

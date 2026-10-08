@@ -5,7 +5,8 @@
 
   // ===========================================================================
   // 1) NAVIGATION BAR - fixed to the top, hamburger on the right. The hamburger's color
-  //    follows the page's background color.
+  //    follows the page's background color. It doesn't open anything yet: the menu is still
+  //    being designed (the earlier dropdown is in the git history, commit f145fa0).
   // ===========================================================================
 
   // Hamburger color for each page background color. A background that is not listed here
@@ -19,11 +20,6 @@
   var DEFAULT_HAMBURGER = "#FFFFFF";
   var COLOR_TOLERANCE = 8;   // how far off (in RGB steps) a page color may be and still count as a match
 
-  // Pages listed in the hamburger menu. Add more like: { label: "Work", href: "/work" }
-  var NAV_LINKS = [
-    { label: "Home", href: "/" }
-  ];
-
   // --- reading colors from the page (shared by the bar and the background matching) ---
   function parseColor(str) {
     if (!str || str.indexOf("color(") === 0) return null;
@@ -33,20 +29,11 @@
     if (a > 1) a = a / 100;
     return { r: +n[0], g: +n[1], b: +n[2], a: a };
   }
-  function lum(c) {
-    function ch(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
-    return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
-  }
-  function contrast(a, b) {
-    var l1 = lum(a), l2 = lum(b);
-    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-  }
   function rgb(c) { return "rgb(" + c.r + "," + c.g + "," + c.b + ")"; }
   function fromHex(h) {
     var n = parseInt(h.slice(1), 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   }
-
 
   // The site wallpaper's color, wherever the wallpaper sits (Cargo draws the site background
   // there). Of several, the last one is painted on top; a hidden or see-through one is ignored.
@@ -153,68 +140,18 @@
       nav.style.setProperty("--fx-nav-auto", icon);
     }
 
-    // --- the menu panel copies the page's background, text color and font ---
-    function paintMenu() {
-      var bg = pageBackground() || { r: 255, g: 255, b: 255 };
-      var sample = document.querySelector("[class^='cmtext'], [class^='cmtitle'], [class*=' cmtext'], [class*=' cmtitle']") || document.body;
-      var cs = getComputedStyle(sample);
-      var fg = parseColor(cs.color);
-      if (!fg || contrast(fg, bg) < 3) fg = lum(bg) > 0.4 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
-      menu.style.setProperty("--fx-menu-bg", rgb(bg));
-      menu.style.setProperty("--fx-menu-fg", rgb(fg));
-      if (cs.fontFamily) menu.style.setProperty("--fx-menu-font", cs.fontFamily);
-    }
-
     // --- build the bar ---
     var nav = mk("nav", "fx-nav");
     nav.setAttribute("aria-label", "Main");
 
     var burger = mk("button", "fx-nav-burger");
     burger.type = "button";
-    burger.setAttribute("aria-label", "Open menu");
-    burger.setAttribute("aria-expanded", "false");
-    burger.setAttribute("aria-controls", "fx-menu");
+    burger.setAttribute("aria-label", "Menu");
     burger.innerHTML = '<span class="fx-burger" data-fx-reflect><span></span><span></span><span></span></span>';
 
     nav.appendChild(burger);
 
-    // --- build the menu panel ---
-    var menu = mk("div", "fx-menu");
-    menu.id = "fx-menu";
-    var list = mk("ul");
-    NAV_LINKS.forEach(function (item) {
-      var li = mk("li");
-      var a = mk("a", "fx-menu-link");
-      a.href = item.href;
-      a.textContent = item.label;
-      li.appendChild(a);
-      list.appendChild(li);
-    });
-    menu.appendChild(list);
-
-    // --- open / close ---
-    var open = false;
-    function setOpen(on) {
-      if (on === open) return;
-      open = on;
-      if (on) paintMenu();
-      menu.classList.toggle("fx-open", on);
-      burger.setAttribute("aria-expanded", on ? "true" : "false");
-      burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
-    }
-    burger.addEventListener("click", function () { setOpen(!open); });
-    menu.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest("a")) setOpen(false);
-    });
-    document.addEventListener("click", function (e) {
-      if (open && !menu.contains(e.target) && !burger.contains(e.target)) setOpen(false);
-    });
-    document.addEventListener("keydown", function (e) {
-      if (open && e.key === "Escape") { setOpen(false); burger.focus(); }
-    });
-
     document.body.appendChild(nav);
-    document.body.appendChild(menu);
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
     nav.classList.add("fx-nav-still");
@@ -358,7 +295,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v21 loaded");
+    console.log("[fx] navigation + cursor v22 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
