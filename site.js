@@ -251,7 +251,23 @@
       if (parseFloat(getComputedStyle(el).opacity) < 0.05) return false;
       return true;
     }
+    // Horizontal rules (<hr>) are only a pixel or two thick, so the pointer counts as "on" one
+    // when it is within a few pixels of the line: the ball is much bigger than the line, and
+    // it should flip as soon as it touches it. Along the line the pointer must be over it.
+    var RULE_REACH = 6;
+    function overRule(px, py) {
+      var hrs = document.getElementsByTagName("hr");
+      for (var i = 0; i < hrs.length; i++) {
+        var r = hrs[i].getBoundingClientRect();
+        if (px < r.left || px > r.right || py < r.top - RULE_REACH || py > r.bottom + RULE_REACH) continue;
+        var cs = getComputedStyle(hrs[i]);
+        if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) continue;
+        return true;
+      }
+      return false;
+    }
     function overText(px, py) {
+      if (overRule(px, py)) return true;
       var els = [];
       collect(document, px, py, els, 0);
       for (var i = 0; i < els.length; i++) {
@@ -313,7 +329,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v23 loaded");
+    console.log("[fx] navigation + cursor v24 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
