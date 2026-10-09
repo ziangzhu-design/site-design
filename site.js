@@ -196,7 +196,6 @@
     menu.setAttribute("inert", "");
     var panel = mk("nav", "fx-menu-panel");
     panel.setAttribute("aria-label", "Site menu");
-    panel.tabIndex = -1;
     panel.innerHTML = MENU_HTML;
     menu.appendChild(panel);
 
@@ -209,7 +208,6 @@
       if (on) menu.removeAttribute("inert"); else menu.setAttribute("inert", "");
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
-      if (on) panel.focus({ preventScroll: true });
       refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
     }
     burger.addEventListener("click", function () { setOpen(!open); });

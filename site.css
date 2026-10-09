@@ -216,7 +216,6 @@ html {
   padding-top: calc(var(--fx-nav-gutter) + 1.3rem);   /* starts below the hamburger */
   background: var(--fx-menu-bg);
   text-align: left;
-  outline: none;
   transform: translateX(100%);
   transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1);
 }
