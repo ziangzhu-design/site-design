@@ -223,12 +223,54 @@ html {
   transform: none;
 }
 
+/* Cargo's own site menu (the overlay page, id E3223264275 - the same id as CARGO_MENU.pageId in
+   site.js): Cargo puts it on screen, this makes it slide in from the right while the darkening
+   fades in, and slide away again when the hamburger closes it (site.js adds fx-leaving, waits for
+   the slide, then asks Cargo to close it). Keep the overlay's own transition in Cargo on the
+   default ("appear"), or the two animations will fight. */
+[id="E3223264275"].page,
+.page[page-url="site-menu"] {
+  animation: fx-dim-in var(--fx-menu-ms) ease;
+}
+[id="E3223264275"] .page-layout,
+.page[page-url="site-menu"] .page-layout {
+  animation: fx-slide-in var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+[id="E3223264275"].fx-leaving,
+.page[page-url="site-menu"].fx-leaving {
+  animation: none;
+  background-color: transparent !important;
+  transition: background-color var(--fx-menu-ms) ease;
+}
+[id="E3223264275"].fx-leaving .page-layout,
+.page[page-url="site-menu"].fx-leaving .page-layout {
+  animation: none;
+  transform: translateX(100%);
+  transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+@keyframes fx-dim-in {
+  from { background-color: rgba(0, 0, 0, 0); }
+}
+@keyframes fx-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fx-nav,
   .fx-burger span,
   .fx-menu,
   .fx-menu::before,
-  .fx-menu-panel {
+  .fx-menu-panel,
+  [id="E3223264275"].page,
+  .page[page-url="site-menu"],
+  [id="E3223264275"] .page-layout,
+  .page[page-url="site-menu"] .page-layout,
+  [id="E3223264275"].fx-leaving,
+  .page[page-url="site-menu"].fx-leaving,
+  [id="E3223264275"].fx-leaving .page-layout,
+  .page[page-url="site-menu"].fx-leaving .page-layout {
+    animation: none;
     transition: none;
   }
 }

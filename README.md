@@ -13,13 +13,18 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   sienna hamburger, sienna page -> near-black hamburger. Any other background keeps it white.
   The page content starts below the bar (a small gutter), and the page background behind that
   gutter is matched to Cargo's wallpaper color.
-- **Site menu** - clicking the hamburger turns it into an X and slides a panel in from the right
-  over a darkened page; clicking the X, the darkened page or Escape slides it back. The look is
-  copied from the "site menu" page designed in Cargo (30% wide, olive, 1.5rem padding, lines
-  around the entries; the values are `--fx-menu-*` at the top of `site.css`). The entries are
-  `MENU_HTML` at the top of `site.js` - it is a copy, so editing that page in Cargo does not change
-  the site menu until `MENU_HTML` is updated. (It is not Cargo's own overlay: Cargo only lets its
-  editor link open those, and documents no way to open one from code.)
+- **Site menu** - the hamburger opens and closes the "site menu" page designed in Cargo (an
+  overlay, address `/site-menu`). Clicking it turns the hamburger into an X and the page slides in
+  from the right over a darkened page; clicking the X (or Escape) slides it back out. `site.js`
+  opens it the way a link to it would (it clicks a link to `/site-menu` on the page if there is
+  one, or a text link "MENU"; otherwise it follows the address itself), and closes it with a text
+  link "CLOSE" if there is one, or by Escape / a click outside it / following the link again. The
+  names are `CARGO_MENU` at the top of `site.js`. The slide animation is in `site.css` (the
+  overlay's id `E3223264275`, `--fx-menu-ms`); keep the overlay's own transition in Cargo on the
+  default.
+  If Cargo's menu does not open within a moment, the hamburger shows a built-in copy of the menu
+  instead (`MENU_HTML` in `site.js`, look in `--fx-menu-*` in `site.css`), and writes
+  "Cargo's menu did not open" to the browser console, so the button never goes dead.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, the clock, the hamburger and horizontal rules. Over
   expandable images (where the browser would show its zoom-in / zoom-out cursor) it morphs into

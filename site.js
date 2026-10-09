@@ -6,7 +6,8 @@
   // ===========================================================================
   // 1) NAVIGATION BAR - fixed to the top, hamburger on the right. The hamburger's color
   //    follows the page's background color. Clicking it turns it into an X and slides the site
-  //    menu in from the right; clicking again slides it back.
+  //    menu in from the right (Cargo's own overlay page, or the built-in copy); clicking again
+  //    slides it back.
   // ===========================================================================
 
   // Hamburger color for each page background color. A background that is not listed here
@@ -19,10 +20,21 @@
   ];
   var DEFAULT_HAMBURGER = "#FFFFFF";
 
-  // The site menu: a panel that slides in from the right when the hamburger is clicked. This is
-  // the content of the "site menu" page designed in Cargo (a line, the entries, a line); its
-  // look (30% wide, olive, padding, darkened page) is in site.css. Edit the entries here. To make
-  // one a link, write it like <a href="/works">WORKS</a>.
+  // The site menu is the overlay page designed in Cargo (address /site-menu). The hamburger opens
+  // it the way a link to it would: it clicks a link to that page if there is one in Cargo (found by
+  // its address, or by its text - openLinkText - for a text link added with Cmd+K, Link to Page,
+  // on a pinned page so it exists on every page), and otherwise follows the address itself.
+  // To slide it away again it uses a "Close Overlay" text link (Cmd+K, Navigate, Close Overlay)
+  // with the text closeLinkText - optional - or clicks outside it, or the open link once more.
+  // pageId / slug identify the page, as in its CSS in Cargo ([id="..."]) and its address; site.css
+  // needs the same ones for the slide animation.
+  var CARGO_MENU = { slug: "site-menu", pageId: "E3223264275", openLinkText: "MENU", closeLinkText: "CLOSE" };
+
+  // If that does not open Cargo's menu the hamburger shows this built-in copy of the menu instead,
+  // so the site never ends up with a dead button. It is the content of the
+  // "site menu" page (a line, the entries, a line); its look (30% wide, olive, padding, darkened
+  // page) is in site.css. Edit the entries here. To make one a link, write it like
+  // <a href="/works">WORKS</a>.
   var MENU_HTML =
     '<hr>' +
     '<div style="text-align: left;"><span class="cmsubtitlebasic">ABOUT<br>WORKS</span></div>' +
@@ -137,7 +149,7 @@
     function pageBackground() {
       var r = burger.getBoundingClientRect();
       var px = r.left + r.width / 2, py = r.top + r.height / 2;
-      var spots = [".fx-menu-panel", ".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
+      var spots = [".fx-menu-panel", '[id="' + CARGO_MENU.pageId + '"] .page-content', ".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
         if (spots[i] === ".wallpaper") {
           var wc = wallpaperColor();
@@ -190,7 +202,90 @@
 
     nav.appendChild(burger);
 
-    // --- the site menu: a dimmed page with a panel that slides in from the right ---
+    // --- Cargo's own overlay: found, opened and closed through the links you added in Cargo ---
+    var LEAVE_MS = 450;   // how long the slide-away takes (keep in step with --fx-menu-ms in site.css)
+    function cargoEl() {
+      return document.getElementById(CARGO_MENU.pageId) || document.querySelector('[page-url="' + CARGO_MENU.slug + '"]');
+    }
+    // on screen = there, taking up room, not hidden and not faded out (Cargo may hide the page instead of removing it)
+    function cargoOn() {
+      var el = cargoEl();
+      return !!(el && el.getClientRects().length && getComputedStyle(el).visibility !== "hidden" && !fadedOut(el));
+    }
+    function cargoShown() {
+      var el = cargoEl();
+      return cargoOn() && !el.classList.contains("fx-leaving");
+    }
+    function findLink(text) {
+      if (!text) return null;
+      var want = text.trim().toUpperCase(), all = document.querySelectorAll("a, button, [role='button']");
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].closest(".fx-nav, .fx-menu")) continue;
+        if (all[i].textContent.replace(/\s+/g, " ").trim().toUpperCase() === want) return all[i];
+      }
+      return null;
+    }
+    // A real link to the menu page in Cargo: by its address first, then by its text
+    function findOpenLink() {
+      var slug = CARGO_MENU.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), at = new RegExp("(^|/)" + slug + "/?($|[?#])");
+      var all = document.querySelectorAll("a[href]");
+      for (var i = 0; i < all.length; i++) {
+        if (!all[i].closest(".fx-nav, .fx-menu") && at.test(all[i].getAttribute("href"))) return all[i];
+      }
+      return findLink(CARGO_MENU.openLinkText);
+    }
+    // No link in the page: follow the menu page's address as if a link to it had been clicked. If
+    // nothing in Cargo takes the click, it is cancelled, so the visitor never leaves the page.
+    function openByAddress() {
+      var a = document.createElement("a");
+      a.href = "/" + CARGO_MENU.slug;
+      a.tabIndex = -1;
+      a.setAttribute("aria-hidden", "true");
+      a.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden";
+      document.body.appendChild(a);
+      function guard(e) { if (!e.defaultPrevented) e.preventDefault(); }
+      window.addEventListener("click", guard);   // the last stop for a click: runs after Cargo's own handlers
+      a.click();
+      window.removeEventListener("click", guard);
+      setTimeout(function () { a.remove(); }, 1500);
+    }
+    function clickOpenTrigger() {
+      var link = findOpenLink();
+      if (link) link.click(); else openByAddress();
+    }
+    // Look every 40ms for up to ms milliseconds until test() is true, then call then(true/false)
+    function whenThat(test, ms, then) {
+      var t0 = performance.now();
+      (function look() {
+        if (test()) return then(true);
+        if (performance.now() - t0 > ms) return then(false);
+        setTimeout(look, 40);
+      })();
+    }
+    // Ask Cargo to close its menu: try the ways Cargo documents, one after the other, until it is gone
+    function closeCargoNow(done) {
+      var tries = [
+        function () { var l = findLink(CARGO_MENU.closeLinkText); if (l) { l.click(); return true; } return false; },
+        function () { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", keyCode: 27, bubbles: true })); return true; },
+        function () {   // a press on the dimmed area, as a visitor clicking outside the menu would do
+          var e = cargoEl();
+          if (!e) return false;
+          ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach(function (t) {
+            e.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }));
+          });
+          return true;
+        },
+        function () { clickOpenTrigger(); return true; }   // following the link again closes it
+      ];
+      (function next(i) {
+        if (!cargoOn()) return done(true);
+        if (i >= tries.length) return done(false);
+        if (!tries[i]()) return next(i + 1);
+        whenThat(function () { return !cargoOn(); }, 300, function (gone) { if (gone) done(true); else next(i + 1); });
+      })(0);
+    }
+
+    // --- the built-in copy of the menu: a dimmed page with a panel that slides in from the right ---
     var menu = mk("div", "fx-menu");
     menu.id = "fx-menu";
     menu.setAttribute("inert", "");
@@ -198,32 +293,93 @@
     panel.setAttribute("aria-label", "Site menu");
     panel.innerHTML = MENU_HTML;
     menu.appendChild(panel);
-
-    // --- open / close: the icon changes between the hamburger and an X, the menu slides ---
-    var open = false;
-    function setOpen(on) {
-      if (on === open) return;
-      open = on;
+    function ownSet(on) {
       menu.classList.toggle("fx-open", on);
       if (on) menu.removeAttribute("inert"); else menu.setAttribute("inert", "");
+    }
+
+    // --- open / close: the icon changes between the hamburger and an X, the menu slides ---
+    var open = false, busy = false, viaCargo = false;
+    function showState(on) {
+      open = on;
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
+      burger.setAttribute("aria-controls", viaCargo ? CARGO_MENU.pageId : "fx-menu");
       refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
     }
-    burger.addEventListener("click", function () { setOpen(!open); });
-    // Clicking the darkened page (anything outside the panel) closes it, and so does following a link inside it
+    var cargoBroken = false;   // set when Cargo's menu did not open, so the next click goes straight to the built-in one
+    function openMenu() {
+      if (busy || open) return;
+      var link = findOpenLink();
+      if (cargoBroken && !link) { viaCargo = false; ownSet(true); showState(true); return; }
+      viaCargo = true; busy = true; showState(true);
+      var startPath = location.pathname;
+      if (link) link.click(); else openByAddress();
+      whenThat(cargoShown, 800, function (ok) {
+        busy = false;
+        // if Cargo went to the menu page as an ordinary page instead of opening it over this one, undo that
+        if (ok && location.pathname !== startPath) { history.back(); ok = false; }
+        if (ok) return refreshHamburger();
+        cargoBroken = true;
+        console.warn("[fx] Cargo's menu did not open - showing the built-in menu instead");
+        viaCargo = false; ownSet(true); showState(true);
+      });
+    }
+    function closeMenu() {
+      if (busy || !open) return;
+      if (!viaCargo) { ownSet(false); showState(false); return; }
+      busy = true;
+      var el = cargoEl();
+      if (el) el.classList.add("fx-leaving");   // site.css slides it away, then Cargo is asked to close it
+      showState(false);
+      setTimeout(function () {
+        closeCargoNow(function (ok) {
+          busy = false;
+          var e = cargoEl();
+          if (e) e.classList.remove("fx-leaving");   // Cargo may keep the page around, hidden: it must be ready for the next time
+          if (ok) return;
+          console.warn("[fx] could not close Cargo's menu");
+          showState(true);
+        });
+      }, el ? LEAVE_MS : 0);
+    }
+    // The menu can also be opened/closed by Cargo itself (a click outside it, a link inside it...):
+    // keep the icon in step with what is really on screen.
+    function syncMenuState() {
+      if (busy) return;
+      var real = cargoShown();
+      if (!viaCargo && !real) return;
+      if (real !== open) { viaCargo = true; showState(real); }
+    }
+
+    // Cargo may close its menu on the very press on the hamburger ("click outside"), so remember
+    // whether it was open when the press began, and don't re-open it by accident.
+    var wasOpen = null;
+    burger.addEventListener("pointerdown", function () { wasOpen = open || cargoShown(); }, true);
+    // While Cargo's menu is open, a press on the hamburger is kept away from Cargo's "click outside
+    // closes it" listeners: the hamburger closes the menu itself, sliding it away first.
+    ["pointerdown", "mousedown", "touchstart"].forEach(function (t) {
+      burger.addEventListener(t, function (e) { if (cargoShown() || (viaCargo && open)) e.stopPropagation(); });
+    });
+    burger.addEventListener("click", function (e) {
+      var was = wasOpen !== null ? wasOpen : (open || cargoShown());
+      wasOpen = null;
+      if (was) { e.stopPropagation(); if (!open) open = true; closeMenu(); } else openMenu();
+    });
+    // Built-in menu only: clicking the darkened page, or a link inside, closes it. (Cargo's own menu
+    // closes itself on those; the sync above keeps the icon right.)
     document.addEventListener("click", function (e) {
-      if (open && !burger.contains(e.target) && !panel.contains(e.target)) setOpen(false);
+      if (open && !viaCargo && !burger.contains(e.target) && !panel.contains(e.target)) closeMenu();
     });
     panel.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest("a")) setOpen(false);
+      if (e.target.closest && e.target.closest("a")) closeMenu();
     });
     document.addEventListener("keydown", function (e) {
-      if (open && e.key === "Escape") { setOpen(false); burger.focus(); }
+      if (open && e.key === "Escape") { closeMenu(); burger.focus(); }
     });
-    // While it is open the page behind stays put: scrolling only works inside the panel
+    // While the built-in menu is open the page behind stays put: scrolling only works inside the panel
     function holdPage(e) {
-      if (open && (!panel.contains(e.target) || panel.scrollHeight <= panel.clientHeight)) e.preventDefault();
+      if (open && !viaCargo && (!panel.contains(e.target) || panel.scrollHeight <= panel.clientHeight)) e.preventDefault();
     }
     menu.addEventListener("wheel", holdPage, { passive: false });
     menu.addEventListener("touchmove", holdPage, { passive: false });
@@ -248,7 +404,8 @@
       endStill();
     }
 
-    refreshNav = refreshHamburger;   // from now on the shared checker keeps the hamburger in step
+    // from now on the shared checker keeps the hamburger (and its open/closed look) in step
+    refreshNav = function () { syncMenuState(); refreshHamburger(); };
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -478,7 +635,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v28 loaded");
+    console.log("[fx] navigation + cursor v31 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
