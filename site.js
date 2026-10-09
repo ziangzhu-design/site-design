@@ -459,7 +459,7 @@
       // not turning into the menu's. If Cargo went to the menu as an ordinary page, or ignored the
       // click, that is undone and the built-in menu is shown instead.
       var startUrl = location.href, startPath = nowPath(), startLen = history.length, p0 = pushes, r0 = replaces;
-      var t0 = performance.now(), shownSince = 0, everShown = false, settled = false, finished = false;
+      var t0 = performance.now(), shownSince = 0, everShown = false, settled = false, finished = false, warned = false;
       function stop() {
         finished = true; busy = false; stopWatch = null;
         clearNote();
@@ -468,6 +468,7 @@
       function bail(reason) {
         finished = true; stopWatch = null;
         rememberFailure(); clearNote();
+        warned = true;
         console.warn("[fx] Cargo's menu did not open as an overlay (" + reason + ") - showing the built-in menu instead. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
         ignoreSyncUntil = performance.now() + 2500;
         ownOpen();
@@ -491,7 +492,7 @@
         if (nowPath() === menuPath && startPath !== menuPath) {
           jumpHandled = true; finished = true; stopWatch = null;
           rememberFailure(); clearNote();
-          console.warn("[fx] Cargo's menu did not open as an overlay (Cargo took the link as an ordinary page: the address changed to " + location.pathname + ") - going back and showing the built-in menu instead. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
+          if (!warned) console.warn("[fx] Cargo's menu did not open as an overlay (Cargo took the link as an ordinary page: the address changed to " + location.pathname + ") - going back and showing the built-in menu instead. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
           ignoreSyncUntil = performance.now() + 2500;
           if (open && viaCargo) ownOpen();   // the visitor still wants a menu; if they closed it already, leave it closed
           busy = true;
