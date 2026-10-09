@@ -243,7 +243,8 @@
     var LEAVE_MS = 450;        // how long the slide-away takes (keep in step with --fx-menu-ms in site.css)
     var OPEN_WAIT_MS = 900;    // give up waiting for Cargo's menu to appear after this long
     var SETTLE_MS = 700;       // it must stay up this long with the address unchanged to count as opened
-    var WATCH_MS = 2200;       // the address is watched this long after the click: a late jump is undone
+    var WATCH_MS = 2200;       // the menu's appearance is watched this long after the click
+    var JUMP_WATCH_MS = 6000;  // the address is watched this long after the click, whatever else happens: a late jump to the menu page is undone
     var RETRY_AFTER_MS = 60000; // after a failed attempt, go straight to the built-in menu for this long
     var FAIL_KEY = "fx-cargo-menu-failed";
     var menuPath = "/" + CARGO_MENU.slug;
@@ -471,20 +472,32 @@
         ignoreSyncUntil = performance.now() + 2500;
         ownOpen();
         busy = false;
-        // keep watching for a while: a slow Cargo may still jump to the menu page, or put its menu up late
-        var b0 = performance.now(), undoing = false, closingLate = false;
+        // a slow Cargo may still put its menu up late: it must not stay on top of the built-in one
+        var b0 = performance.now(), closingLate = false;
         (function look() {
-          var onMenuPage = nowPath() === menuPath && startPath !== menuPath;
-          if (onMenuPage && !undoing) {
-            undoing = true; busy = true;
-            undoJump(startUrl, startLen, p0, r0, function () { undoing = false; busy = false; });
-          } else if (!onMenuPage && !undoing && !viaCargo && cargoOn() && !closingLate) {
+          if (!closingLate && !viaCargo && cargoOn() && !(nowPath() === menuPath && startPath !== menuPath)) {
             closingLate = true;
             var e = cargoEl(); if (e) e.classList.add("fx-leaving");
             closeCargoNow(function () { var x = cargoEl(); if (x) x.classList.remove("fx-leaving"); closingLate = false; });
           }
           if (performance.now() - b0 < WATCH_MS + 1500) setTimeout(look, 60);
         })();
+      }
+      // The jump guard: whatever else happens (the menu opens, the visitor closes it again at once, the
+      // watch gives up), Cargo turning the click into a visit to the menu page is always undone.
+      var jumpHandled = false;
+      function jumpGuard() {
+        if (jumpHandled) return;
+        if (nowPath() === menuPath && startPath !== menuPath) {
+          jumpHandled = true; finished = true; stopWatch = null;
+          rememberFailure(); clearNote();
+          console.warn("[fx] Cargo's menu did not open as an overlay (Cargo took the link as an ordinary page: the address changed to " + location.pathname + ") - going back and showing the built-in menu instead. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
+          ignoreSyncUntil = performance.now() + 2500;
+          if (open && viaCargo) ownOpen();   // the visitor still wants a menu; if they closed it already, leave it closed
+          busy = true;
+          return undoJump(startUrl, startLen, p0, r0, function () { busy = false; });
+        }
+        if (performance.now() - t0 < JUMP_WATCH_MS) setTimeout(jumpGuard, 40);
       }
       noteAttempt(startUrl);
       viaCargo = true; busy = true; showState(true);
@@ -498,10 +511,12 @@
       // a menu page Cargo keeps around (hidden) must slide in again each time
       var again = cargoEl();
       if (again) [again, again.querySelector(".page-layout")].forEach(function (n) { if (n) { n.style.animation = "none"; void n.offsetWidth; n.style.animation = ""; } });
+      jumpGuard();
       (function watch() {
         if (finished) return;
         var t = performance.now(), path = nowPath();
-        if (path === menuPath && startPath !== menuPath) return bail("the address changed to " + location.pathname);
+        if (jumpHandled) return;
+        if (path === menuPath && startPath !== menuPath) return;   // the jump guard deals with it
         if (path !== startPath) return stop();   // the visitor (or Cargo) went on to another page: not ours to judge
         if (cargoShown()) {
           everShown = true; busy = false;        // up: the visitor may already close it
