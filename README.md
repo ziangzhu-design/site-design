@@ -13,19 +13,31 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   sienna hamburger, sienna page -> near-black hamburger. Any other background keeps it white.
   The page content starts below the bar (a small gutter), and the page background behind that
   gutter is matched to Cargo's wallpaper color.
-- **Site menu** - the hamburger opens and closes the "site menu" page designed in Cargo (an
-  overlay, address `/site-menu`). Clicking it turns the hamburger into an X and the page slides in
-  from the right over a darkened page; clicking the X (or Escape) slides it back out. `site.js`
-  opens it the way a link to it would (it clicks a link to `/site-menu` on the page if there is
-  one, or a text link "MENU"; otherwise it follows the address itself), and closes it with a text
-  link "CLOSE" if there is one, or by Escape / a click outside it / following the link again. The
-  names are `CARGO_MENU` at the top of `site.js`. The slide animation is in `site.css` (the
-  overlay's id `E3223264275`, `--fx-menu-ms`); keep the overlay's own transition in Cargo on the
-  default. The text in the menu is big: its size is `--fx-menu-font` at the top of `site.css`
-  (36px on a phone, 58px at 1440px wide, 72px at most); it replaces the size of Cargo's text style.
-  If Cargo's menu does not open within a moment, the hamburger shows a built-in copy of the menu
-  instead (`MENU_HTML` in `site.js`, look in `--fx-menu-*` in `site.css`), and writes
-  "Cargo's menu did not open" to the browser console, so the button never goes dead.
+- **Site menu** - the hamburger opens and closes the "site menu" page designed in Cargo (set as an
+  Overlay in Cargo: right-click the page in the Pages panel > Overlay). Clicking it turns the
+  hamburger into an X and the page slides in from the right over a darkened page; clicking the X
+  (or Escape) slides it back out.
+  - **Opening:** `site.js` clicks a link that was made in Cargo's own editor (Cmd+K > Link to Page >
+    site menu, on a pinned page): found by its address (`/site-menu`), or by its text, `MENU`. It
+    never builds an address of its own - Cargo takes a plain address for an ordinary page and jumps
+    to it. After the click it watches the address for about two seconds; if Cargo went to the menu
+    as an ordinary page, or ignored the click, that is undone (exactly as far as Cargo's router took
+    it) and the built-in menu is shown instead, with a line in the browser console saying why. With
+    no such link at all the built-in menu opens straight away.
+  - **Closing:** a link `CLOSE` inside the menu page (Cmd+K > Navigate > Close Overlay; an icon works
+    if its aria-label or title says "close") if there is one, else Escape, else a click outside it.
+    It never follows a link to a page. The names are `CARGO_MENU` at the top of `site.js`; the slide
+    animation is in `site.css` (the overlay's id `E3223264275`, `--fx-menu-ms`). Keep the overlay's
+    own transition in Cargo on the default.
+  - **The built-in copy** (`MENU_HTML` in `site.js`, look in `--fx-menu-*` in `site.css`) is also what
+    shows if Cargo's menu does not open, so the button never goes dead. After a failed attempt the
+    built-in menu is used straight away for a minute (kept in `sessionStorage`).
+  - **Text size:** big - `--fx-menu-font` at the top of `site.css` (36px on a phone, 58px at 1440px
+    wide, 72px at most); it replaces the size of Cargo's text style.
+  - **Colors:** they follow the site background (the `.wallpaper`), with the same pairs as the
+    hamburger (`HAMBURGER_COLORS`): the menu takes the background's own color and its text and lines
+    take the partner color - #5E6B4E background: #D6C6B0 text and lines, #D6C6B0: #5E6B4E,
+    #2B2A28: #A0522D, #A0522D: #2B2A28. Any other background leaves the menu as designed in Cargo.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, the clock, the hamburger and horizontal rules. Over
   expandable images (where the browser would show its zoom-in / zoom-out cursor) it morphs into

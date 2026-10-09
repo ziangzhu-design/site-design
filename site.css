@@ -233,6 +233,35 @@ html {
   line-height: 1.1 !important;
 }
 
+/* The menu's colors follow the site background (the wallpaper): the menu takes the background's own
+   color, and its text and lines take the partner color (the same pairs as the hamburger, set at the
+   top of site.js). site.js turns this on with html.fx-menu-themed and sets --fx-menu-paper and
+   --fx-menu-ink; for a background that is not in the list nothing here applies and the menu stays as
+   designed in Cargo. */
+html.fx-menu-themed .fx-menu-panel,
+html.fx-menu-themed [id="E3223264275"] .page-content,
+html.fx-menu-themed .page[page-url="site-menu"] .page-content {
+  background-color: var(--fx-menu-paper) !important;
+  color: var(--fx-menu-ink) !important;
+}
+html.fx-menu-themed .fx-menu-panel :where(span, a, p, li, h1, h2, h3, h4, h5, h6),
+html.fx-menu-themed [id="E3223264275"] .page-content :where(span, a, p, li, h1, h2, h3, h4, h5, h6),
+html.fx-menu-themed .page[page-url="site-menu"] .page-content :where(span, a, p, li, h1, h2, h3, h4, h5, h6) {
+  color: var(--fx-menu-ink) !important;
+}
+html.fx-menu-themed .fx-menu-panel hr,
+html.fx-menu-themed [id="E3223264275"] .page-content hr,
+html.fx-menu-themed .page[page-url="site-menu"] .page-content hr {
+  border-color: var(--fx-menu-ink) !important;
+  color: var(--fx-menu-ink) !important;
+}
+/* a line drawn as a filled strip rather than a border (site.js marks which kind each one is) */
+html.fx-menu-themed .fx-menu-panel hr[data-fx-rule="fill"],
+html.fx-menu-themed [id="E3223264275"] .page-content hr[data-fx-rule="fill"],
+html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="fill"] {
+  background-color: var(--fx-menu-ink) !important;
+}
+
 /* Cargo's own site menu (the overlay page, id E3223264275 - the same id as CARGO_MENU.pageId in
    site.js): Cargo puts it on screen, this makes it slide in from the right while the darkening
    fades in, and slide away again when the hamburger closes it (site.js adds fx-leaving, waits for

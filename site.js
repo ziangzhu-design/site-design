@@ -149,10 +149,11 @@
     // Of several matching elements the last one wins (it is painted on top), and one that is
     // hidden or doesn't reach the hamburger is ignored. The wallpaper counts wherever it sits.
     // null if no color is found.
-    function pageBackground() {
+    function pageBackground(skipMenu) {
       var r = burger.getBoundingClientRect();
       var px = r.left + r.width / 2, py = r.top + r.height / 2;
       var spots = [".fx-menu-panel", '[id="' + CARGO_MENU.pageId + '"] .page-content', ".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
+      if (skipMenu) spots = spots.slice(2);   // the page behind the menu, not the menu itself
       for (var i = 0; i < spots.length; i++) {
         if (spots[i] === ".wallpaper") {
           var wc = wallpaperColor();
@@ -175,13 +176,46 @@
     }
 
     // --- hamburger color: the partner of the page background in HAMBURGER_COLORS ---
-    function hamburgerFor(bg) {
+    function partnerFor(bg) {
       for (var i = 0; i < HAMBURGER_COLORS.length; i++) {
         var p = fromHex(HAMBURGER_COLORS[i].page);
         var d = Math.sqrt(Math.pow(p.r - bg.r, 2) + Math.pow(p.g - bg.g, 2) + Math.pow(p.b - bg.b, 2));
-        if (d <= COLOR_TOLERANCE) return HAMBURGER_COLORS[i].icon;
+        if (d <= COLOR_TOLERANCE) return HAMBURGER_COLORS[i];
       }
-      return DEFAULT_HAMBURGER;
+      return null;
+    }
+    function hamburgerFor(bg) {
+      var pair = partnerFor(bg);
+      return pair ? pair.icon : DEFAULT_HAMBURGER;
+    }
+
+    // --- the menu's colors follow the site background (the wallpaper) ---
+    // The same pairs as the hamburger: the menu takes the background's own color, and its text and
+    // lines take the partner color. site.css paints it (html.fx-menu-themed); a background that is not
+    // in the list leaves the menu as designed in Cargo.
+    var themedFor = "";
+    function themeMenu() {
+      var bg = wallpaperColor() || pageBackground(true), pair = bg ? partnerFor(bg) : null;
+      var key = pair ? pair.page + ">" + pair.icon : "";
+      if (key !== themedFor) {
+        themedFor = key;
+        if (pair) {
+          root.style.setProperty("--fx-menu-paper", pair.page);
+          root.style.setProperty("--fx-menu-ink", pair.icon);
+          root.classList.add("fx-menu-themed");
+        } else {
+          root.style.removeProperty("--fx-menu-paper");
+          root.style.removeProperty("--fx-menu-ink");
+          root.classList.remove("fx-menu-themed");
+        }
+      }
+      // A line drawn as a filled strip (no border) needs the color as its background; a bordered one
+      // needs it as its border color. Tell site.css which kind each line in the menu is.
+      var rules = document.querySelectorAll('.fx-menu-panel hr, [id="' + CARGO_MENU.pageId + '"] .page-content hr, .page[page-url="' + CARGO_MENU.slug + '"] .page-content hr');
+      for (var i = 0; i < rules.length; i++) {
+        var kind = parseFloat(getComputedStyle(rules[i]).borderTopWidth) > 0 ? "border" : "fill";
+        if (rules[i].getAttribute("data-fx-rule") !== kind) rules[i].setAttribute("data-fx-rule", kind);
+      }
     }
     var lastIcon = "";
     function refreshHamburger() {
@@ -216,6 +250,16 @@
     function pathOf(p) { return (p || "/").replace(/\/+$/, "") || "/"; }
     function nowPath() { return pathOf(location.pathname); }
 
+    // Count what Cargo's router does to the address (nothing is changed: every call goes straight through),
+    // so a jump to the menu as an ordinary page can be undone exactly.
+    var pushes = 0, replaces = 0;
+    ["pushState", "replaceState"].forEach(function (k) {
+      try {
+        var orig = history[k];
+        history[k] = function () { if (k === "pushState") pushes++; else replaces++; return orig.apply(this, arguments); };
+      } catch (e) {}
+    });
+
     var failedAt = 0;
     function failedRecently() {
       var t = failedAt;
@@ -226,6 +270,20 @@
       failedAt = Date.now();
       try { sessionStorage.setItem(FAIL_KEY, String(failedAt)); } catch (e) {}
     }
+    // A note kept while the link is being clicked: if the browser reloads onto the menu page (a link Cargo
+    // did not take as an overlay), the new page finds it and sends the visitor straight back.
+    var NOTE_KEY = "fx-cargo-menu-attempt";
+    function noteAttempt(url) { try { sessionStorage.setItem(NOTE_KEY, JSON.stringify({ u: url, t: Date.now() })); } catch (e) {} }
+    function clearNote() { try { sessionStorage.removeItem(NOTE_KEY); } catch (e) {} }
+    try {
+      var left = JSON.parse(sessionStorage.getItem(NOTE_KEY) || "null");
+      if (left) sessionStorage.removeItem(NOTE_KEY);
+      if (left && Date.now() - left.t < 15000 && nowPath() === menuPath && pathOf(new URL(left.u).pathname) !== menuPath) {
+        rememberFailure();
+        console.warn("[fx] The link to the site menu took the browser to the menu page instead of opening it over this page - going back and using the built-in menu. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
+        location.replace(left.u);
+      }
+    } catch (e) {}
 
     function cargoEl() {
       return document.getElementById(CARGO_MENU.pageId) || document.querySelector('[page-url="' + CARGO_MENU.slug + '"]');
@@ -264,18 +322,33 @@
       for (var i = 0; i < all.length; i++) {
         var a = all[i];
         if (a.closest(".fx-nav, .fx-menu, [data-fx]") || (cargo && cargo.contains(a))) continue;
+        if (a.target === "_blank" || a.hasAttribute("download") || typeof a.click !== "function") continue;
         var to = pointsToMenu(a), seen = a.getClientRects().length > 0;
         if (to === true && (!byAddress || (seen && !byAddress.seen))) byAddress = { el: a, seen: seen };
         else if (want && squash(a.textContent) === want && sameSite(a) && (!byText || (seen && !byText.seen))) byText = { el: a, seen: seen };
       }
       return byAddress ? byAddress.el : byText ? byText.el : null;
     }
-    // The "Close Overlay" link: only ever looked for inside the menu page
+    // A link to some other page of the site (or off it): never the "Close Overlay" link
+    function leavesPage(a) {
+      var h = (a.getAttribute("href") || "").trim();
+      if (!h || h === "#" || /^javascript:/i.test(h)) return false;
+      try {
+        var u = new URL(h, location.href), p = pathOf(u.pathname);
+        return u.origin !== location.origin || (p !== nowPath() && p !== menuPath);
+      } catch (e) { return true; }
+    }
+    // The "Close Overlay" link: only ever looked for inside the menu page. By its text, or - for an icon -
+    // by an aria-label / title that says "close".
     function findCloseLink() {
       var cargo = cargoEl(), want = squash(CARGO_MENU.closeLinkText || "");
       if (!cargo || !want) return null;
       var all = cargo.querySelectorAll("a, button, [role='button']");
-      for (var i = 0; i < all.length; i++) if (squash(all[i].textContent) === want) return all[i];
+      for (var i = 0; i < all.length; i++) {
+        var a = all[i], label = (a.getAttribute("aria-label") || a.getAttribute("title") || "");
+        if (a.tagName === "A" && leavesPage(a)) continue;
+        if (squash(a.textContent) === want || squash(label).indexOf(want) >= 0) return a;
+      }
       return null;
     }
     function pressEscape() {
@@ -341,8 +414,35 @@
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
       burger.setAttribute("aria-controls", viaCargo ? CARGO_MENU.pageId : "fx-menu");
       refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
+      burstRefresh(900);    // ...and follows the panel while it slides in or out
+    }
+    var burstUntil = 0, bursting = false;
+    function burstRefresh(ms) {
+      burstUntil = performance.now() + ms;
+      if (bursting) return;
+      bursting = true;
+      (function tick() {
+        refreshHamburger();
+        if (performance.now() < burstUntil) requestAnimationFrame(tick); else bursting = false;
+      })();
     }
     function ownOpen() { viaCargo = false; ownSet(true); showState(true); }
+
+    var stopWatch = null;   // ends the watch over a just-opened Cargo menu (set while there is one)
+
+    // Undo a jump to the menu page as an ordinary page, exactly as far as Cargo's router took it
+    function undoJump(startUrl, startLen, p0, r0, done) {
+      var pushed = pushes - p0, replaced = replaces - r0, grown = history.length - startLen;
+      if (pushed >= 1 && pushed <= 3) history.go(-pushed);
+      else if (pushed === 0 && replaced >= 1) {
+        history.replaceState(history.state, "", startUrl);
+        window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+      } else if (grown >= 1 && grown <= 3) history.go(-grown);
+      setTimeout(function () {
+        if (nowPath() === menuPath) location.replace(startUrl);   // still stuck on the menu page: the page we started on
+        done();
+      }, 700);
+    }
 
     function openMenu() {
       if (busy || open) return;
@@ -350,53 +450,73 @@
       if (!link) {
         if (!failedRecently() && !noLinkNoted) {
           noLinkNoted = true;
-          console.info("[fx] No link to the site menu was found in Cargo, so the built-in menu is shown. To open Cargo's own overlay, add a text link MENU to the site menu page (Cmd+K > Link to Page) on a pinned page.");
+          console.info("[fx] No link to the site menu was found in Cargo, so the built-in menu is shown. To open Cargo's own overlay, put a text link MENU on a pinned page (not on the menu page itself) and make it with Cmd+K > Link to Page > site menu.");
         }
         return ownOpen();
       }
       // Click the link Cargo made, then watch: the menu must appear, over this page, with the address
-      // unchanged. Anything else (Cargo went to the menu as an ordinary page, or ignored the click)
-      // is undone and the built-in menu is shown instead.
-      var startUrl = location.href, startPath = nowPath(), startLen = history.length;
-      var t0 = performance.now(), shownSince = 0, settled = false, finished = false;
+      // not turning into the menu's. If Cargo went to the menu as an ordinary page, or ignored the
+      // click, that is undone and the built-in menu is shown instead.
+      var startUrl = location.href, startPath = nowPath(), startLen = history.length, p0 = pushes, r0 = replaces;
+      var t0 = performance.now(), shownSince = 0, everShown = false, settled = false, finished = false;
+      function stop() {
+        finished = true; busy = false; stopWatch = null;
+        clearNote();
+      }
+      stopWatch = stop;
       function bail(reason) {
-        finished = true;
-        rememberFailure();
+        finished = true; stopWatch = null;
+        rememberFailure(); clearNote();
         console.warn("[fx] Cargo's menu did not open as an overlay (" + reason + ") - showing the built-in menu instead. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
         ignoreSyncUntil = performance.now() + 2500;
         ownOpen();
-        busy = true;
-        if (location.href !== startUrl) {
-          var n = history.length - startLen;   // entries Cargo added: go back exactly that many
-          if (n >= 1 && n <= 3) history.go(-n);
-        }
-        setTimeout(function () {
-          if (location.href !== startUrl) location.replace(startUrl);   // last resort: the page we started on
-          busy = false;
-        }, 700);
-        // a menu that turns up late must not stay on top of the built-in one
-        setTimeout(function () { if (cargoOn()) { var e = cargoEl(); if (e) e.classList.add("fx-leaving"); closeCargoNow(function () { var x = cargoEl(); if (x) x.classList.remove("fx-leaving"); }); } }, 1000);
+        busy = false;
+        // keep watching for a while: a slow Cargo may still jump to the menu page, or put its menu up late
+        var b0 = performance.now(), undoing = false, closingLate = false;
+        (function look() {
+          var onMenuPage = nowPath() === menuPath && startPath !== menuPath;
+          if (onMenuPage && !undoing) {
+            undoing = true; busy = true;
+            undoJump(startUrl, startLen, p0, r0, function () { undoing = false; busy = false; });
+          } else if (!onMenuPage && !undoing && !viaCargo && cargoOn() && !closingLate) {
+            closingLate = true;
+            var e = cargoEl(); if (e) e.classList.add("fx-leaving");
+            closeCargoNow(function () { var x = cargoEl(); if (x) x.classList.remove("fx-leaving"); closingLate = false; });
+          }
+          if (performance.now() - b0 < WATCH_MS + 1500) setTimeout(look, 60);
+        })();
       }
+      noteAttempt(startUrl);
       viaCargo = true; busy = true; showState(true);
-      link.click();
+      // Cargo's own handler runs first; a click it did not take must not turn into the browser leaving the page
+      function guard(e) { if (!e.defaultPrevented) e.preventDefault(); }
+      window.addEventListener("click", guard);
+      try { link.click(); } catch (err) { window.removeEventListener("click", guard); return bail("the link could not be clicked"); }
+      window.removeEventListener("click", guard);
+      // a menu page Cargo keeps around (hidden) must slide in again each time
+      var again = cargoEl();
+      if (again) [again, again.querySelector(".page-layout")].forEach(function (n) { if (n) { n.style.animation = "none"; void n.offsetWidth; n.style.animation = ""; } });
       (function watch() {
         if (finished) return;
-        var t = performance.now();
-        if (nowPath() !== startPath) return bail("the address changed to " + location.pathname);
+        var t = performance.now(), path = nowPath();
+        if (path === menuPath && startPath !== menuPath) return bail("the address changed to " + location.pathname);
+        if (path !== startPath) return stop();   // the visitor (or Cargo) went on to another page: not ours to judge
         if (cargoShown()) {
+          everShown = true; busy = false;        // up: the visitor may already close it
           if (!shownSince) shownSince = t;
-          if (!settled && t - shownSince >= SETTLE_MS) { settled = true; busy = false; refreshHamburger(); }
+          if (!settled && t - shownSince >= SETTLE_MS) { settled = true; clearNote(); }
         } else {
           shownSince = 0;
-          if (!settled && t - t0 > OPEN_WAIT_MS) return bail("it did not appear");
-          if (settled) { finished = true; return; }   // closed again by the visitor or by Cargo: not ours to watch
+          if (everShown) return stop();          // it came up and then went away (closed by the visitor or by Cargo)
+          if (t - t0 > OPEN_WAIT_MS) return bail("it did not appear");
         }
-        if (t - t0 > WATCH_MS) { finished = true; busy = false; return; }
+        if (t - t0 > WATCH_MS) return stop();
         setTimeout(watch, 40);
       })();
     }
     function closeMenu() {
       if (busy || !open) return;
+      if (stopWatch) stopWatch();
       if (!viaCargo) { ownSet(false); showState(false); return; }
       busy = true;
       var el = cargoEl();
@@ -446,7 +566,7 @@
     // Built-in menu only: clicking the darkened page, or a link inside, closes it. (Cargo's own menu
     // closes itself on those; the sync above keeps the icon right.)
     document.addEventListener("click", function (e) {
-      if (open && !viaCargo && !burger.contains(e.target) && !panel.contains(e.target)) closeMenu();
+      if (e.isTrusted && open && !viaCargo && !burger.contains(e.target) && !panel.contains(e.target)) closeMenu();
     });
     panel.addEventListener("click", function (e) {
       if (e.target.closest && e.target.closest("a")) closeMenu();
@@ -482,7 +602,7 @@
     }
 
     // from now on the shared checker keeps the hamburger (and its open/closed look) in step
-    refreshNav = function () { syncMenuState(); refreshHamburger(); };
+    refreshNav = function () { syncMenuState(); themeMenu(); refreshHamburger(); };
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -712,7 +832,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v32 loaded");
+    console.log("[fx] navigation + cursor v33 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
