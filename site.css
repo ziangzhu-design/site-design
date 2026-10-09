@@ -73,6 +73,12 @@ html.fx-cursor-on *:not([data-fx-probe]) {
   --fx-nav-hit: 14px;                      /* extra tappable area to the left and right of the icon */
   --fx-nav-hit-top: 24px;                  /* extra tappable area above the icon */
   --fx-nav-gap: 4px;                       /* clear space between the hamburger and the page content */
+  /* The site menu - values from the "site menu" page designed in Cargo */
+  --fx-menu-w: 30%;                        /* panel width */
+  --fx-menu-bg: #5E6B4E;                   /* panel color */
+  --fx-menu-dim: rgba(0, 0, 0, 0.25);      /* how much the page behind is darkened */
+  --fx-menu-pad: 1.5rem;                   /* space inside the panel */
+  --fx-menu-ms: 0.5s;                      /* how long it takes to slide */
   /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
   --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
 }
@@ -171,14 +177,65 @@ html {
   transform: translateY(calc(var(--fx-icon-w) * -0.22)) rotate(-45deg) scaleX(0.72);
 }
 
+/* Site menu: a dimmed page with a panel on the right that slides in. Closed = invisible, off to
+   the right, and inert (no clicks, no tabbing into it). */
+.fx-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482900;                     /* above the page, below the hamburger */
+  display: flex;
+  justify-content: flex-end;               /* the panel sits on the right */
+  visibility: hidden;
+  transition: visibility 0s linear var(--fx-menu-ms);
+}
+.fx-menu.fx-open {
+  visibility: visible;
+  transition: visibility 0s;
+}
+/* the darkening fades; the panel slides - at the same time */
+.fx-menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--fx-menu-dim);
+  opacity: 0;
+  transition: opacity var(--fx-menu-ms) ease;
+}
+.fx-menu.fx-open::before {
+  opacity: 1;
+}
+.fx-menu-panel {
+  position: relative;
+  box-sizing: border-box;
+  width: max(var(--fx-menu-w), 280px);     /* 30% on a computer, never narrower than 280px */
+  max-width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--fx-menu-pad);
+  padding-top: calc(var(--fx-nav-gutter) + 1.3rem);   /* starts below the hamburger */
+  background: var(--fx-menu-bg);
+  text-align: left;
+  outline: none;
+  transform: translateX(100%);
+  transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+.fx-menu.fx-open .fx-menu-panel {
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fx-nav,
-  .fx-burger span {
+  .fx-burger span,
+  .fx-menu,
+  .fx-menu::before,
+  .fx-menu-panel {
     transition: none;
   }
 }
 @media print {
-  .fx-nav {
+  .fx-nav,
+  .fx-menu {
     display: none;
   }
   .pages {

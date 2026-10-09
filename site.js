@@ -5,9 +5,8 @@
 
   // ===========================================================================
   // 1) NAVIGATION BAR - fixed to the top, hamburger on the right. The hamburger's color
-  //    follows the page's background color. Clicking it turns it into an X and back, but it
-  //    doesn't open a menu yet: the menu is still being designed (the earlier dropdown is in
-  //    the git history, commit f145fa0).
+  //    follows the page's background color. Clicking it turns it into an X and slides the site
+  //    menu in from the right; clicking again slides it back.
   // ===========================================================================
 
   // Hamburger color for each page background color. A background that is not listed here
@@ -19,6 +18,15 @@
     { page: "#A0522D", icon: "#2B2A28" }
   ];
   var DEFAULT_HAMBURGER = "#FFFFFF";
+
+  // The site menu: a panel that slides in from the right when the hamburger is clicked. This is
+  // the content of the "site menu" page designed in Cargo (a line, the entries, a line); its
+  // look (30% wide, olive, padding, darkened page) is in site.css. Edit the entries here. To make
+  // one a link, write it like <a href="/works">WORKS</a>.
+  var MENU_HTML =
+    '<hr>' +
+    '<div style="text-align: left;"><span class="cmsubtitlebasic">ABOUT<br>WORKS</span></div>' +
+    '<hr>';
   var COLOR_TOLERANCE = 8;   // how far off (in RGB steps) a page color may be and still count as a match
 
   // --- reading colors from the page (shared by the bar and the background matching) ---
@@ -129,7 +137,7 @@
     function pageBackground() {
       var r = burger.getBoundingClientRect();
       var px = r.left + r.width / 2, py = r.top + r.height / 2;
-      var spots = [".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
+      var spots = [".fx-menu-panel", ".backdrop", ".page", ".pages", ".content", ".wallpaper", "body", "html"];
       for (var i = 0; i < spots.length; i++) {
         if (spots[i] === ".wallpaper") {
           var wc = wallpaperColor();
@@ -177,27 +185,54 @@
     burger.type = "button";
     burger.setAttribute("aria-label", "Open menu");
     burger.setAttribute("aria-expanded", "false");
+    burger.setAttribute("aria-controls", "fx-menu");
     burger.innerHTML = '<span class="fx-burger" data-fx-reflect><span></span><span></span><span></span></span>';
 
     nav.appendChild(burger);
 
-    // --- open / close: the icon changes between the hamburger and an X ---
+    // --- the site menu: a dimmed page with a panel that slides in from the right ---
+    var menu = mk("div", "fx-menu");
+    menu.id = "fx-menu";
+    menu.setAttribute("inert", "");
+    var panel = mk("nav", "fx-menu-panel");
+    panel.setAttribute("aria-label", "Site menu");
+    panel.tabIndex = -1;
+    panel.innerHTML = MENU_HTML;
+    menu.appendChild(panel);
+
+    // --- open / close: the icon changes between the hamburger and an X, the menu slides ---
     var open = false;
     function setOpen(on) {
       if (on === open) return;
       open = on;
+      menu.classList.toggle("fx-open", on);
+      if (on) menu.removeAttribute("inert"); else menu.setAttribute("inert", "");
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
+      if (on) panel.focus({ preventScroll: true });
+      refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
     }
     burger.addEventListener("click", function () { setOpen(!open); });
+    // Clicking the darkened page (anything outside the panel) closes it, and so does following a link inside it
     document.addEventListener("click", function (e) {
-      if (open && !burger.contains(e.target)) setOpen(false);
+      if (open && !burger.contains(e.target) && !panel.contains(e.target)) setOpen(false);
+    });
+    panel.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest("a")) setOpen(false);
     });
     document.addEventListener("keydown", function (e) {
       if (open && e.key === "Escape") { setOpen(false); burger.focus(); }
     });
+    // While it is open the page behind stays put: scrolling only works inside the panel
+    function holdPage(e) {
+      if (open && (!panel.contains(e.target) || panel.scrollHeight <= panel.clientHeight)) e.preventDefault();
+    }
+    menu.addEventListener("wheel", holdPage, { passive: false });
+    menu.addEventListener("touchmove", holdPage, { passive: false });
+    panel.addEventListener("transitionend", refreshHamburger);
 
     document.body.appendChild(nav);
+    document.body.appendChild(menu);
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
     // The page itself may still be arriving (this script runs before it), so stay in that
@@ -445,7 +480,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v27 loaded");
+    console.log("[fx] navigation + cursor v28 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
