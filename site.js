@@ -490,9 +490,11 @@
       viaCargo = true; busy = true; showState(true);
       // Cargo's own handler runs first; a click it did not take must not turn into the browser leaving the page
       function guard(e) { if (!e.defaultPrevented) e.preventDefault(); }
+      function unguard() { document.removeEventListener("click", guard); window.removeEventListener("click", guard); }
+      document.addEventListener("click", guard);   // on document too: it still runs when a handler there stops the click from reaching window
       window.addEventListener("click", guard);
-      try { link.click(); } catch (err) { window.removeEventListener("click", guard); return bail("the link could not be clicked"); }
-      window.removeEventListener("click", guard);
+      try { link.click(); } catch (err) { unguard(); return bail("the link could not be clicked"); }
+      unguard();
       // a menu page Cargo keeps around (hidden) must slide in again each time
       var again = cargoEl();
       if (again) [again, again.querySelector(".page-layout")].forEach(function (n) { if (n) { n.style.animation = "none"; void n.offsetWidth; n.style.animation = ""; } });
