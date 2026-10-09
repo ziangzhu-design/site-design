@@ -21,7 +21,8 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   link "CLOSE" if there is one, or by Escape / a click outside it / following the link again. The
   names are `CARGO_MENU` at the top of `site.js`. The slide animation is in `site.css` (the
   overlay's id `E3223264275`, `--fx-menu-ms`); keep the overlay's own transition in Cargo on the
-  default.
+  default. The text in the menu is big: its size is `--fx-menu-font` at the top of `site.css`
+  (36px on a phone, 58px at 1440px wide, 72px at most); it replaces the size of Cargo's text style.
   If Cargo's menu does not open within a moment, the hamburger shows a built-in copy of the menu
   instead (`MENU_HTML` in `site.js`, look in `--fx-menu-*` in `site.css`), and writes
   "Cargo's menu did not open" to the browser console, so the button never goes dead.

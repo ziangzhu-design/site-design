@@ -79,6 +79,7 @@ html.fx-cursor-on *:not([data-fx-probe]) {
   --fx-menu-dim: rgba(0, 0, 0, 0.25);      /* how much the page behind is darkened */
   --fx-menu-pad: 1.5rem;                   /* space inside the panel */
   --fx-menu-ms: 0.5s;                      /* how long it takes to slide */
+  --fx-menu-font: clamp(2.25rem, 4vw, 4.5rem);   /* size of the text in the menu: 36px on a phone, 58px at 1440px wide, 72px at most */
   /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
   --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
 }
@@ -221,6 +222,15 @@ html {
 }
 .fx-menu.fx-open .fx-menu-panel {
   transform: none;
+}
+
+/* The text inside the menu is big. --fx-menu-font (at the top) sets its size; it replaces the size of
+   Cargo's text style, in Cargo's own menu page and in the built-in copy alike. */
+.fx-menu-panel :where(span, a, p, li, h1, h2, h3, h4, h5, h6),
+[id="E3223264275"] .page-content :where(span, a, p, li, h1, h2, h3, h4, h5, h6),
+.page[page-url="site-menu"] .page-content :where(span, a, p, li, h1, h2, h3, h4, h5, h6) {
+  font-size: var(--fx-menu-font) !important;
+  line-height: 1.1 !important;
 }
 
 /* Cargo's own site menu (the overlay page, id E3223264275 - the same id as CARGO_MENU.pageId in
