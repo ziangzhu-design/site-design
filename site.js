@@ -21,11 +21,14 @@
   var DEFAULT_HAMBURGER = "#FFFFFF";
 
   // The site menu is the overlay page designed in Cargo (address /site-menu). The hamburger opens
-  // it the way a link to it would: it clicks a link to that page if there is one in Cargo (found by
-  // its address, or by its text - openLinkText - for a text link added with Cmd+K, Link to Page,
-  // on a pinned page so it exists on every page), and otherwise follows the address itself.
-  // To slide it away again it uses a "Close Overlay" text link (Cmd+K, Navigate, Close Overlay)
-  // with the text closeLinkText - optional - or clicks outside it, or the open link once more.
+  // it by clicking a link made in Cargo's own editor (Cmd+K > Link to Page, on a pinned page so it
+  // exists on every page): found by its address, or by its text - openLinkText. Cargo only treats
+  // a link made that way as "open as overlay": the code never builds an address of its own, because
+  // Cargo would take that for an ordinary page and jump to it. If there is no such link, or Cargo
+  // does not open the menu over the page (the address changes, nothing appears), whatever Cargo did
+  // is undone and the built-in menu below is shown instead.
+  // To slide it away again it uses a "Close Overlay" link inside the menu page (Cmd+K > Navigate >
+  // Close Overlay) with the text closeLinkText - optional - else Escape, else a click outside it.
   // pageId / slug identify the page, as in its CSS in Cargo ([id="..."]) and its address; site.css
   // needs the same ones for the slide animation.
   var CARGO_MENU = { slug: "site-menu", pageId: "E3223264275", openLinkText: "MENU", closeLinkText: "CLOSE" };
@@ -202,8 +205,28 @@
 
     nav.appendChild(burger);
 
-    // --- Cargo's own overlay: found, opened and closed through the links you added in Cargo ---
-    var LEAVE_MS = 450;   // how long the slide-away takes (keep in step with --fx-menu-ms in site.css)
+    // --- Cargo's own overlay: opened and closed only through links made in Cargo ---
+    var LEAVE_MS = 450;        // how long the slide-away takes (keep in step with --fx-menu-ms in site.css)
+    var OPEN_WAIT_MS = 900;    // give up waiting for Cargo's menu to appear after this long
+    var SETTLE_MS = 700;       // it must stay up this long with the address unchanged to count as opened
+    var WATCH_MS = 2200;       // the address is watched this long after the click: a late jump is undone
+    var RETRY_AFTER_MS = 60000; // after a failed attempt, go straight to the built-in menu for this long
+    var FAIL_KEY = "fx-cargo-menu-failed";
+    var menuPath = "/" + CARGO_MENU.slug;
+    function pathOf(p) { return (p || "/").replace(/\/+$/, "") || "/"; }
+    function nowPath() { return pathOf(location.pathname); }
+
+    var failedAt = 0;
+    function failedRecently() {
+      var t = failedAt;
+      try { t = Math.max(t, +sessionStorage.getItem(FAIL_KEY) || 0); } catch (e) {}
+      return !!t && Date.now() - t < RETRY_AFTER_MS;
+    }
+    function rememberFailure() {
+      failedAt = Date.now();
+      try { sessionStorage.setItem(FAIL_KEY, String(failedAt)); } catch (e) {}
+    }
+
     function cargoEl() {
       return document.getElementById(CARGO_MENU.pageId) || document.querySelector('[page-url="' + CARGO_MENU.slug + '"]');
     }
@@ -216,42 +239,49 @@
       var el = cargoEl();
       return cargoOn() && !el.classList.contains("fx-leaving");
     }
-    function findLink(text) {
-      if (!text) return null;
-      var want = text.trim().toUpperCase(), all = document.querySelectorAll("a, button, [role='button']");
+    function squash(t) { return t.replace(/\s+/g, " ").trim().toUpperCase(); }
+    // Does a link go to the menu page? (an address-less link, or one to some other page, does not)
+    function pointsToMenu(a) {
+      var h = (a.getAttribute("href") || "").trim();
+      if (!h || h === "#" || /^javascript:/i.test(h)) return false;
+      try {
+        var u = new URL(h, location.href);
+        return u.origin === location.origin && pathOf(u.pathname) === menuPath;
+      } catch (e) { return false; }
+    }
+    // A link that stays on this site (or has no address at all)
+    function sameSite(a) {
+      var h = (a.getAttribute("href") || "").trim();
+      if (!h || h === "#" || /^javascript:/i.test(h)) return true;
+      try { return new URL(h, location.href).origin === location.origin; } catch (e) { return false; }
+    }
+    // The link made in Cargo that opens the menu: by its address first, then by its text. Never one of
+    // ours, one inside the menu page itself, or one that leaves the site. One that is on screen is
+    // preferred over one on a page that is not showing.
+    function findOpenLink() {
+      var all = document.querySelectorAll("a"), cargo = cargoEl(), want = squash(CARGO_MENU.openLinkText || "");
+      var byAddress = null, byText = null;
       for (var i = 0; i < all.length; i++) {
-        if (all[i].closest(".fx-nav, .fx-menu")) continue;
-        if (all[i].textContent.replace(/\s+/g, " ").trim().toUpperCase() === want) return all[i];
+        var a = all[i];
+        if (a.closest(".fx-nav, .fx-menu, [data-fx]") || (cargo && cargo.contains(a))) continue;
+        var to = pointsToMenu(a), seen = a.getClientRects().length > 0;
+        if (to === true && (!byAddress || (seen && !byAddress.seen))) byAddress = { el: a, seen: seen };
+        else if (want && squash(a.textContent) === want && sameSite(a) && (!byText || (seen && !byText.seen))) byText = { el: a, seen: seen };
       }
+      return byAddress ? byAddress.el : byText ? byText.el : null;
+    }
+    // The "Close Overlay" link: only ever looked for inside the menu page
+    function findCloseLink() {
+      var cargo = cargoEl(), want = squash(CARGO_MENU.closeLinkText || "");
+      if (!cargo || !want) return null;
+      var all = cargo.querySelectorAll("a, button, [role='button']");
+      for (var i = 0; i < all.length; i++) if (squash(all[i].textContent) === want) return all[i];
       return null;
     }
-    // A real link to the menu page in Cargo: by its address first, then by its text
-    function findOpenLink() {
-      var slug = CARGO_MENU.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), at = new RegExp("(^|/)" + slug + "/?($|[?#])");
-      var all = document.querySelectorAll("a[href]");
-      for (var i = 0; i < all.length; i++) {
-        if (!all[i].closest(".fx-nav, .fx-menu") && at.test(all[i].getAttribute("href"))) return all[i];
-      }
-      return findLink(CARGO_MENU.openLinkText);
-    }
-    // No link in the page: follow the menu page's address as if a link to it had been clicked. If
-    // nothing in Cargo takes the click, it is cancelled, so the visitor never leaves the page.
-    function openByAddress() {
-      var a = document.createElement("a");
-      a.href = "/" + CARGO_MENU.slug;
-      a.tabIndex = -1;
-      a.setAttribute("aria-hidden", "true");
-      a.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden";
-      document.body.appendChild(a);
-      function guard(e) { if (!e.defaultPrevented) e.preventDefault(); }
-      window.addEventListener("click", guard);   // the last stop for a click: runs after Cargo's own handlers
-      a.click();
-      window.removeEventListener("click", guard);
-      setTimeout(function () { a.remove(); }, 1500);
-    }
-    function clickOpenTrigger() {
-      var link = findOpenLink();
-      if (link) link.click(); else openByAddress();
+    function pressEscape() {
+      var ev = new KeyboardEvent("keydown", { key: "Escape", code: "Escape", keyCode: 27, bubbles: true });
+      ev.fxOwn = true;   // our own handler below ignores it
+      document.dispatchEvent(ev);
     }
     // Look every 40ms for up to ms milliseconds until test() is true, then call then(true/false)
     function whenThat(test, ms, then) {
@@ -262,26 +292,31 @@
         setTimeout(look, 40);
       })();
     }
-    // Ask Cargo to close its menu: try the ways Cargo documents, one after the other, until it is gone
+    // Ask Cargo to close its menu, the ways Cargo documents, one after the other, until it is gone:
+    // the Close Overlay link, Escape, a click outside the menu. It never follows a link to a page.
     function closeCargoNow(done) {
       var tries = [
-        function () { var l = findLink(CARGO_MENU.closeLinkText); if (l) { l.click(); return true; } return false; },
-        function () { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", keyCode: 27, bubbles: true })); return true; },
-        function () {   // a press on the dimmed area, as a visitor clicking outside the menu would do
+        function () { var l = findCloseLink(); if (!l) return false; l.click(); return true; },
+        function () { pressEscape(); return true; },
+        function () {
           var e = cargoEl();
           if (!e) return false;
           ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach(function (t) {
             e.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }));
           });
           return true;
-        },
-        function () { clickOpenTrigger(); return true; }   // following the link again closes it
+        }
       ];
+      var startPath = nowPath();
       (function next(i) {
         if (!cargoOn()) return done(true);
         if (i >= tries.length) return done(false);
         if (!tries[i]()) return next(i + 1);
-        whenThat(function () { return !cargoOn(); }, 300, function (gone) { if (gone) done(true); else next(i + 1); });
+        whenThat(function () { return !cargoOn() || nowPath() !== startPath; }, 500, function () {
+          // gone: finished. The address moved (Cargo's own way of closing it): stop trying more.
+          if (!cargoOn() || nowPath() !== startPath) return done(!cargoOn());
+          next(i + 1);
+        });
       })(0);
     }
 
@@ -299,7 +334,7 @@
     }
 
     // --- open / close: the icon changes between the hamburger and an X, the menu slides ---
-    var open = false, busy = false, viaCargo = false;
+    var open = false, busy = false, viaCargo = false, ignoreSyncUntil = 0, noLinkNoted = false;
     function showState(on) {
       open = on;
       burger.setAttribute("aria-expanded", on ? "true" : "false");
@@ -307,23 +342,58 @@
       burger.setAttribute("aria-controls", viaCargo ? CARGO_MENU.pageId : "fx-menu");
       refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
     }
-    var cargoBroken = false;   // set when Cargo's menu did not open, so the next click goes straight to the built-in one
+    function ownOpen() { viaCargo = false; ownSet(true); showState(true); }
+
     function openMenu() {
       if (busy || open) return;
-      var link = findOpenLink();
-      if (cargoBroken && !link) { viaCargo = false; ownSet(true); showState(true); return; }
+      var link = failedRecently() ? null : findOpenLink();
+      if (!link) {
+        if (!failedRecently() && !noLinkNoted) {
+          noLinkNoted = true;
+          console.info("[fx] No link to the site menu was found in Cargo, so the built-in menu is shown. To open Cargo's own overlay, add a text link MENU to the site menu page (Cmd+K > Link to Page) on a pinned page.");
+        }
+        return ownOpen();
+      }
+      // Click the link Cargo made, then watch: the menu must appear, over this page, with the address
+      // unchanged. Anything else (Cargo went to the menu as an ordinary page, or ignored the click)
+      // is undone and the built-in menu is shown instead.
+      var startUrl = location.href, startPath = nowPath(), startLen = history.length;
+      var t0 = performance.now(), shownSince = 0, settled = false, finished = false;
+      function bail(reason) {
+        finished = true;
+        rememberFailure();
+        console.warn("[fx] Cargo's menu did not open as an overlay (" + reason + ") - showing the built-in menu instead. In Cargo, check that the site menu page is set to Overlay (right-click it in the Pages panel) and that the MENU link was made with Cmd+K > Link to Page.");
+        ignoreSyncUntil = performance.now() + 2500;
+        ownOpen();
+        busy = true;
+        if (location.href !== startUrl) {
+          var n = history.length - startLen;   // entries Cargo added: go back exactly that many
+          if (n >= 1 && n <= 3) history.go(-n);
+        }
+        setTimeout(function () {
+          if (location.href !== startUrl) location.replace(startUrl);   // last resort: the page we started on
+          busy = false;
+        }, 700);
+        // a menu that turns up late must not stay on top of the built-in one
+        setTimeout(function () { if (cargoOn()) { var e = cargoEl(); if (e) e.classList.add("fx-leaving"); closeCargoNow(function () { var x = cargoEl(); if (x) x.classList.remove("fx-leaving"); }); } }, 1000);
+      }
       viaCargo = true; busy = true; showState(true);
-      var startPath = location.pathname;
-      if (link) link.click(); else openByAddress();
-      whenThat(cargoShown, 800, function (ok) {
-        busy = false;
-        // if Cargo went to the menu page as an ordinary page instead of opening it over this one, undo that
-        if (ok && location.pathname !== startPath) { history.back(); ok = false; }
-        if (ok) return refreshHamburger();
-        cargoBroken = true;
-        console.warn("[fx] Cargo's menu did not open - showing the built-in menu instead");
-        viaCargo = false; ownSet(true); showState(true);
-      });
+      link.click();
+      (function watch() {
+        if (finished) return;
+        var t = performance.now();
+        if (nowPath() !== startPath) return bail("the address changed to " + location.pathname);
+        if (cargoShown()) {
+          if (!shownSince) shownSince = t;
+          if (!settled && t - shownSince >= SETTLE_MS) { settled = true; busy = false; refreshHamburger(); }
+        } else {
+          shownSince = 0;
+          if (!settled && t - t0 > OPEN_WAIT_MS) return bail("it did not appear");
+          if (settled) { finished = true; return; }   // closed again by the visitor or by Cargo: not ours to watch
+        }
+        if (t - t0 > WATCH_MS) { finished = true; busy = false; return; }
+        setTimeout(watch, 40);
+      })();
     }
     function closeMenu() {
       if (busy || !open) return;
@@ -343,13 +413,19 @@
         });
       }, el ? LEAVE_MS : 0);
     }
-    // The menu can also be opened/closed by Cargo itself (a click outside it, a link inside it...):
-    // keep the icon in step with what is really on screen.
+    // The menu can also be opened/closed by Cargo itself (a click outside it, a link inside it, a visit
+    // straight to its address...): keep the icon in step with what stays on screen.
+    var diffSince = 0;
     function syncMenuState() {
-      if (busy) return;
+      if (busy || performance.now() < ignoreSyncUntil) return;
       var real = cargoShown();
-      if (!viaCargo && !real) return;
-      if (real !== open) { viaCargo = true; showState(real); }
+      if ((!viaCargo && !real) || real === open) { diffSince = 0; return; }
+      var t = performance.now();
+      if (!diffSince) diffSince = t;
+      if (t - diffSince < 250) return;   // Cargo's own transitions: only follow what stays
+      diffSince = 0;
+      viaCargo = true;
+      showState(real);
     }
 
     // Cargo may close its menu on the very press on the hamburger ("click outside"), so remember
@@ -362,9 +438,10 @@
       burger.addEventListener(t, function (e) { if (cargoShown() || (viaCargo && open)) e.stopPropagation(); });
     });
     burger.addEventListener("click", function (e) {
+      e.stopPropagation();   // the click that opens the menu must not reach Cargo's "click outside" and close it again
       var was = wasOpen !== null ? wasOpen : (open || cargoShown());
       wasOpen = null;
-      if (was) { e.stopPropagation(); if (!open) open = true; closeMenu(); } else openMenu();
+      if (was) { if (!open) open = true; closeMenu(); } else openMenu();
     });
     // Built-in menu only: clicking the darkened page, or a link inside, closes it. (Cargo's own menu
     // closes itself on those; the sync above keeps the icon right.)
@@ -375,7 +452,7 @@
       if (e.target.closest && e.target.closest("a")) closeMenu();
     });
     document.addEventListener("keydown", function (e) {
-      if (open && e.key === "Escape") { closeMenu(); burger.focus(); }
+      if (!e.fxOwn && open && e.key === "Escape") { closeMenu(); burger.focus(); }
     });
     // While the built-in menu is open the page behind stays put: scrolling only works inside the panel
     function holdPage(e) {
@@ -635,7 +712,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v31 loaded");
+    console.log("[fx] navigation + cursor v32 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
