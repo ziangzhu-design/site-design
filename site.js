@@ -414,13 +414,14 @@
     var MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
     var DOTS = [[216.5, 42.5], [299, 78], [358.5, 133], [378.5, 212], [358.5, 291], [299, 346],
                 [216.5, 381.5], [133.5, 346], [74, 291], [54.5, 212], [74, 133], [133.5, 78]];
+    // (each tile runs a few units under the next one, so no hairline of the page can show between them)
     var CX = 216.5, CY = 212;   // the middle of the face
     var dock = mk("div", "fx-clock-dock");
     dock.setAttribute("aria-hidden", "true");
     dock.innerHTML =
       '<svg class="fx-clock" viewBox="0 0 1003 442" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect class="fx-clock-face" x="0" y="0" width="430" height="442"/>' +
-      '<rect class="fx-clock-bar" x="430" y="0" width="127" height="442"/>' +
+      '<rect class="fx-clock-face" x="0" y="0" width="436" height="442"/>' +
+      '<rect class="fx-clock-bar" x="430" y="0" width="133" height="442"/>' +
       '<rect class="fx-clock-panel" x="557" y="0" width="446" height="442"/>' +
       DOTS.map(function (d) { return '<circle class="fx-clock-dot" cx="' + d[0] + '" cy="' + d[1] + '" r="12"/>'; }).join("") +
       '<g class="fx-hand-hour"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 86) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
@@ -446,6 +447,7 @@
     function fitClockText() {
       timeText.setAttribute("font-size", 95);
       var tl = timeText.getComputedTextLength();
+      if (!tl) return;                       // not drawn (hidden on a short screen): nothing to measure
       if (tl > 372) timeText.setAttribute("font-size", (95 * 372 / tl).toFixed(2));
       dateText.setAttribute("font-size", 95);
       var dl = dateText.getComputedTextLength(), k = dl > 316 ? 316 / dl : 1;
@@ -473,25 +475,42 @@
         fitClockText();
       }
     }
-    var calmMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var motionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    var clockRaf = 0, clockTick = 0, clockStopTimer = 0, clockUp = false;
     function clockLoop() {
       if (!clockRun) return;
-      clockFrame();
-      if (calmMotion) setTimeout(clockLoop, 1000 - (Date.now() % 1000));   // visitors who ask for less motion: once a second
-      else requestAnimationFrame(clockLoop);
+      try { clockFrame(); } catch (err) { clockRun = false; return; }   // whatever goes wrong here must never break the menu
+      if (motionQuery && motionQuery.matches) clockTick = setTimeout(clockLoop, 1000 - (Date.now() % 1000));   // visitors who ask for less motion: once a second
+      else clockRaf = requestAnimationFrame(clockLoop);
     }
     function clockSet(on) {
+      clearTimeout(clockStopTimer);
       if (on) {
         if (!clockRun) { clockRun = true; clockLoop(); }
       } else {
-        // keep it running while it slides away, then stop drawing frames
-        setTimeout(function () { if (!open) clockRun = false; }, 700);
+        // keep it running while it slides away, then stop drawing frames (and drop the one already queued)
+        clockStopTimer = setTimeout(function () {
+          if (clockUp) return;
+          clockRun = false;
+          cancelAnimationFrame(clockRaf);
+          clearTimeout(clockTick);
+        }, 700);
       }
     }
-    // The clock is as wide as the menu (the menu page Cargo draws, if that is what is showing)
+    // The clock is as wide as the menu (the last width Cargo's menu page had, so it never changes size
+    // while it slides), and it is up while the menu is: at once for the built-in menu, and for Cargo's
+    // own only while Cargo's page is really on screen - so it arrives and leaves with the panel.
+    var clockW = 0;
     function placeClock() {
-      var host = cargoShown() ? cargoEl().querySelector(".page-content") : null, w = host ? host.offsetWidth : 0;
-      if (w >= 200) dock.style.setProperty("--fx-clock-w", w + "px"); else dock.style.removeProperty("--fx-clock-w");
+      var el = cargoEl(), host = el && cargoOn() ? el.querySelector(".page-content") : null, w = host ? host.offsetWidth : 0;
+      if (w >= 200) clockW = w;
+      if (viaCargo && clockW) dock.style.setProperty("--fx-clock-w", clockW + "px"); else dock.style.removeProperty("--fx-clock-w");
+      var up = open && (!viaCargo || cargoShown());
+      if (up !== clockUp) {
+        clockUp = up;
+        root.classList.toggle("fx-clock-up", up);
+        clockSet(up);
+      }
     }
 
     // --- open / close: the icon changes between the hamburger and an X, the menu slides ---
@@ -501,8 +520,6 @@
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
       burger.setAttribute("aria-controls", viaCargo ? CARGO_MENU.pageId : "fx-menu");
-      root.classList.toggle("fx-menu-open", on);
-      clockSet(on);
       placeClock();
       refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
       burstRefresh(900);    // ...and follows the panel while it slides in or out
@@ -801,7 +818,7 @@
     }
     // The clock in the menu is drawn as one picture and never takes a click, so look at its box
     function overClock(px, py) {
-      if (!document.documentElement.classList.contains("fx-menu-open")) return false;
+      if (!document.documentElement.classList.contains("fx-clock-up")) return false;
       var c = document.querySelector(".fx-clock-dock .fx-clock");
       if (!c) return false;
       var r = c.getBoundingClientRect();
@@ -949,7 +966,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v34 loaded");
+    console.log("[fx] navigation + cursor v35 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

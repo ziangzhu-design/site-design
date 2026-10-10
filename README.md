@@ -44,12 +44,13 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   Inter Semibold. It shows the visitor's own local time; the hands sweep continuously (once a second
   for visitors whose device asks for less motion). It has a very soft, centered drop shadow
   (`--fx-clock-shadow` at the top of `site.css`), slides in and out with the menu, never takes a
-  click, and is hidden on screens shorter than 520px. A longer date ("OCT 10th") is made just small
+  click, and is hidden on screens 520px tall or less. A longer date ("OCT 10th") is made just small
   enough to fit. The font is Inter 600 from jsDelivr's copy of the npm package `@fontsource/inter`
   (SIL Open Font License), declared as "FX Inter" in `site.css`. The drawing is built in `site.js`
   (design units 1003 x 442, measured from the artwork); the colors are in `site.css`.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
-  things and inverts over text, images, the clock, the hamburger and horizontal rules. Over
+  things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
+  horizontal rules. Over
   expandable images (where the browser would show its zoom-in / zoom-out cursor) it morphs into
   a square, with the same breathing and inverting. It also looks inside Cargo's own components
   (gallery, columns, clock), which keep part of their content in an open "shadow" layer.

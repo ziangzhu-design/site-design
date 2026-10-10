@@ -255,16 +255,21 @@ html {
   max-width: calc(100vw - 2 * var(--fx-menu-pad));
   z-index: 2147482990;                     /* above the menu, below the hamburger */
   pointer-events: none;
+  direction: ltr;                          /* the picture is the same on a right-to-left page */
   visibility: hidden;
   opacity: 0;
   transform: translateX(calc(100% + 2 * var(--fx-menu-pad)));
   transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1), opacity 0.3s ease, visibility 0s linear var(--fx-menu-ms);
 }
-html.fx-menu-open .fx-clock-dock {
+html.fx-clock-up .fx-clock-dock {
   visibility: visible;
   opacity: 1;
   transform: none;
   transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1), opacity 0.3s ease, visibility 0s;
+}
+.fx-clock,
+.fx-clock * {
+  transition: none !important;             /* a site-wide transition rule must never make a hand spin the long way round */
 }
 .fx-clock {
   display: block;
@@ -290,6 +295,10 @@ html.fx-menu-open .fx-clock-dock {
   font-weight: 600;
   letter-spacing: -0.082em;                /* tracking measured from the artwork, row by row */
   font-kerning: normal;
+}
+.fx-clock .fx-clock-time {
+  font-variant-numeric: tabular-nums;      /* every digit the same width, so the time does not shift as it changes */
+  letter-spacing: -0.0644em;
 }
 .fx-clock .fx-clock-date { letter-spacing: -0.0716em; }
 /* on a short screen there is no room for it under the entries */
