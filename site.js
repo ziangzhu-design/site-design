@@ -416,6 +416,9 @@
                 [216.5, 381.5], [133.5, 346], [74, 291], [54.5, 212], [74, 133], [133.5, 78]];
     // (each tile runs a few units under the next one, so no hairline of the page can show between them)
     var CX = 216.5, CY = 212;   // the middle of the face
+    // Where the digital time, the line and the date sit (design units). The time is a little higher and the
+    // line a little lower than in the artwork, so the tail of a "p" (as in "11:32pm") never touches the line.
+    var TIME_Y = 190, RULE_Y = 224, DATE_Y = 313;
     var dock = mk("div", "fx-clock-dock");
     dock.setAttribute("aria-hidden", "true");
     dock.innerHTML =
@@ -428,10 +431,12 @@
       '<g class="fx-hand-minute"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 160.5) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
       '<g class="fx-hand-second"><line x1="' + CX + '" y1="' + CY + '" x2="' + CX + '" y2="' + (CY - 162) + '"/></g>' +
       '<circle class="fx-clock-hub" cx="' + CX + '" cy="' + CY + '" r="12"/>' +
-      '<text class="fx-clock-time" x="596" y="193" font-size="95">00:00am</text>' +
-      '<rect class="fx-clock-rule" x="604" y="217" width="359" height="3"/>' +
-      '<circle class="fx-clock-bullet" cx="623" cy="279" r="23.5"/>' +
-      '<text class="fx-clock-date" x="655" y="311" font-size="95">DEC 1st</text>' +
+      '<g class="fx-clock-digital">' +
+      '<text class="fx-clock-time" x="596" y="' + TIME_Y + '" font-size="95">00:00am</text>' +
+      '<rect class="fx-clock-rule" x="604" y="' + RULE_Y + '" width="359" height="3"/>' +
+      '<circle class="fx-clock-bullet" cx="623" cy="' + (DATE_Y - 32) + '" r="23.5"/>' +
+      '<text class="fx-clock-date" x="655" y="' + DATE_Y + '" font-size="95">DEC 1st</text>' +
+      '</g>' +
       '</svg>';
     var hourHand = dock.querySelector(".fx-hand-hour"), minuteHand = dock.querySelector(".fx-hand-minute"), secondHand = dock.querySelector(".fx-hand-second");
     var timeText = dock.querySelector(".fx-clock-time"), dateText = dock.querySelector(".fx-clock-date");
@@ -455,7 +460,7 @@
       var r = 23.5 * k;
       bulletDot.setAttribute("r", r.toFixed(2));
       bulletDot.setAttribute("cx", (599.5 + r).toFixed(2));
-      bulletDot.setAttribute("cy", (311 - 32 * k).toFixed(2));
+      bulletDot.setAttribute("cy", (DATE_Y - 32 * k).toFixed(2));
       dateText.setAttribute("x", (599.5 + 2 * r + 8.5 * k).toFixed(2));
     }
     if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", fitClockText);   // the font has arrived: measure again
@@ -966,7 +971,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v35 loaded");
+    console.log("[fx] navigation + cursor v36 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

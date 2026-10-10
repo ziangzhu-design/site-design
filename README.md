@@ -45,7 +45,10 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   for visitors whose device asks for less motion). It has a very soft, centered drop shadow
   (`--fx-clock-shadow` at the top of `site.css`), slides in and out with the menu, never takes a
   click, and is hidden on screens 520px tall or less. A longer date ("OCT 10th") is made just small
-  enough to fit. The font is Inter 600 from jsDelivr's copy of the npm package `@fontsource/inter`
+  enough to fit. The time, line and date sit a little smaller in the middle of their panel for more
+  breathing room (`--fx-clock-text-scale` at the top of `site.css`: 1 = the artwork's size, smaller = more
+  space), and the dot beside the date fades out and in (`--fx-clock-blink`, 2s; steady for visitors who
+  ask for less motion, paused while the menu is closed). The font is Inter 600 from jsDelivr's copy of the npm package `@fontsource/inter`
   (SIL Open Font License), declared as "FX Inter" in `site.css`. The drawing is built in `site.js`
   (design units 1003 x 442, measured from the artwork); the colors are in `site.css`.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable

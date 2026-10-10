@@ -80,6 +80,8 @@ html.fx-cursor-on *:not([data-fx-probe]) {
   --fx-menu-pad: 1.5rem;                   /* space inside the panel */
   --fx-menu-ms: 0.5s;                      /* how long it takes to slide */
   --fx-menu-font: clamp(2.25rem, 4vw, 4.5rem);   /* size of the text in the menu: 36px on a phone, 58px at 1440px wide, 72px at most */
+  --fx-clock-text-scale: 0.92;             /* the digital time and date inside their panel: 1 = the artwork's size, smaller = more space around them */
+  --fx-clock-blink: 2s;                    /* one fade out and in of the dot beside the date */
   --fx-clock-shadow: 0 0.7rem 1rem -0.65rem rgba(0, 0, 0, 0.3);   /* the very soft shadow beneath the clock (centered: no sideways offset) */
   /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
   --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
@@ -301,6 +303,22 @@ html.fx-clock-up .fx-clock-dock {
   letter-spacing: -0.0644em;
 }
 .fx-clock .fx-clock-date { letter-spacing: -0.0716em; }
+/* The time, line and date sit a little smaller in the middle of their panel (more space round them) */
+.fx-clock .fx-clock-digital {
+  transform-box: view-box;
+  transform-origin: 782px 221px;
+  transform: scale(var(--fx-clock-text-scale, 0.92));
+}
+/* The dot beside the date fades out and in, slowly, while the menu is up */
+.fx-clock .fx-clock-bullet {
+  animation: fx-clock-blink var(--fx-clock-blink, 2s) ease-in-out infinite;
+  animation-play-state: paused;
+}
+html.fx-clock-up .fx-clock .fx-clock-bullet { animation-play-state: running; }
+@keyframes fx-clock-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.12; }
+}
 /* on a short screen there is no room for it under the entries */
 @media (max-height: 520px) {
   .fx-clock-dock { display: none; }
@@ -375,6 +393,7 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
   .fx-menu::before,
   .fx-menu-panel,
   .fx-clock-dock,
+  .fx-clock .fx-clock-bullet,
   [id="E3223264275"].page,
   .page[page-url="site-menu"],
   [id="E3223264275"] .page-layout,
