@@ -129,7 +129,6 @@
   // Cargo changes the page without telling us (page swaps, color fades), so keep checking:
   // right after DOM changes, when the tab comes back, and on a steady beat for the rest.
   var refreshNav = function () {};   // replaced once the bar exists
-  var menuWordAt = function () { return null; };   // replaced once the bar exists: which menu word (if any) is at a point
   function refreshAll() {
     if (document.hidden) return;
     matchBackground();
@@ -369,10 +368,12 @@
       ev.fxOwn = true;   // our own handler below ignores it
       document.dispatchEvent(ev);
     }
-    // --- the words of Cargo's own menu page work as links, and are underlined, without touching its content ---
-    // The words are found in the page's text (not inside a real link), underlined with the browser's text
-    // highlight (it draws over the text where it stands: no element is added or changed), and a click on one
-    // goes where MENU_LINKS says - the way a click on a normal link goes, so Cargo takes it as a page link.
+    // --- the words of Cargo's own menu page work as links, without touching its content ---
+    // The words are found in the page's text (outside any real link) and underlined with the browser's text
+    // highlight, which draws over the text where it stands: nothing in Cargo's page is added or changed.
+    // Over each word sits a real, invisible link in a layer of our own (.fx-wordlinks), the size of the word, so
+    // it is a link for everything: click, tap, keyboard (Tab, Enter), screen readers, middle- and ctrl-click, the
+    // context menu. Cargo takes a click on it as a click on a normal page link.
     var menuWords = [], menuWordsKey = "", nodeIds = new WeakMap(), nextNodeId = 1;
     var hasHighlights = !!(window.CSS && CSS.highlights && window.Highlight);
     function idOf(node) {
@@ -391,18 +392,20 @@
             for (var i = 0; i < MENU_LINKS.length; i++) {
               if (MENU_LINKS[i].words.indexOf(m[0].toUpperCase()) < 0) continue;
               found.push({ node: node, start: m.index, end: m.index + m[0].length, href: MENU_LINKS[i].href });
-              key += idOf(node) + ":" + m.index + ":" + MENU_LINKS[i].href + ";";
+              key += idOf(node) + ":" + m.index + ":" + (m.index + m[0].length) + ":" + MENU_LINKS[i].href + ";";
             }
           }
         }
       }
-      if (key === menuWordsKey && menuWords.every(function (w) { return w.node.isConnected; })) return;   // nothing changed
+      if (key === menuWordsKey && menuWords.every(function (w) {   // nothing changed: same words, same places, still the same text
+        return w.node.isConnected && w.range.startContainer === w.node && w.range.endContainer === w.node && w.range.startOffset === w.start && w.range.endOffset === w.end;
+      })) return;
       menuWordsKey = key;
       menuWords = found.map(function (w) {
         var r = document.createRange();
         r.setStart(w.node, w.start);
         r.setEnd(w.node, w.end);
-        return { node: w.node, range: r, href: w.href };
+        return { node: w.node, range: r, href: w.href, start: w.start, end: w.end };
       });
       if (hasHighlights) {
         if (menuWords.length) {
@@ -412,39 +415,57 @@
         } else CSS.highlights.delete("fx-menu-link");
       } else root.classList.toggle("fx-menu-words", menuWords.length > 0);   // older browsers: site.css underlines the text instead
     }
-    menuWordAt = function (px, py) {
-      if (!menuWords.length || !cargoShown()) return null;
-      var el = document.elementFromPoint(px, py), cargo = cargoEl();
-      if (!el || !cargo || !cargo.contains(el) || (el.closest && el.closest("a, button, [role='button'], input"))) return null;
-      for (var i = 0; i < menuWords.length; i++) {
-        var rects = menuWords[i].range.getClientRects();
-        for (var j = 0; j < rects.length; j++) {
-          var r = rects[j];
-          if (px >= r.left - 2 && px <= r.right + 2 && py >= r.top - 2 && py <= r.bottom + 2) return menuWords[i];
-        }
+    // The links over the words: one per line a word is on, moved to follow the word (it slides in with the menu)
+    var wordLayer = mk("div", "fx-wordlinks"), wordLinks = [];
+    function placeWordLinks() {
+      var want = [];
+      if (menuWords.length && cargoShown()) {
+        menuWords.forEach(function (w) {
+          var p = w.node.parentElement;
+          if (!p || p.isContentEditable || getComputedStyle(p).visibility === "hidden" || fadedOut(p)) return;   // not for hidden text, nor for text being edited
+          var rs = w.range.getClientRects();
+          for (var j = 0; j < rs.length; j++) {
+            if (rs[j].width > 0 && rs[j].height > 0) want.push({ href: w.href, label: w.range.toString(), r: rs[j], first: j === 0 });
+          }
+        });
       }
-      return null;
-    };
-    function goTo(href) {
-      var a = document.createElement("a");
-      a.href = href;
-      a.tabIndex = -1;
-      a.setAttribute("data-fx", "");
-      a.setAttribute("aria-hidden", "true");
-      a.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden";
-      document.body.appendChild(a);
-      a.click();   // as a click on a link: Cargo takes it as a normal page link (or the browser goes there)
-      setTimeout(function () { a.remove(); }, 1500);
+      while (wordLinks.length < want.length) {
+        var link = document.createElement("a");
+        wordLayer.appendChild(link);
+        wordLinks.push(link);
+      }
+      wordLinks.forEach(function (link, i) {
+        var w = want[i];
+        if (!w) { if (!link.hidden) { link.hidden = true; link.__fxKey = ""; } return; }
+        var key = w.href + "|" + w.label + "|" + w.first + "|" + [w.r.left, w.r.top, w.r.width, w.r.height].map(function (v) { return v.toFixed(1); }).join(",");
+        if (link.__fxKey === key) return;
+        link.__fxKey = key;
+        link.hidden = false;
+        link.setAttribute("href", w.href);
+        link.setAttribute("aria-label", w.label);
+        if (w.first) { link.removeAttribute("tabindex"); link.removeAttribute("aria-hidden"); }
+        else { link.tabIndex = -1; link.setAttribute("aria-hidden", "true"); }   // a word on two lines is announced once
+        link.style.left = (w.r.left - 2) + "px";
+        link.style.top = (w.r.top - 2) + "px";
+        link.style.width = (w.r.width + 4) + "px";
+        link.style.height = (w.r.height + 4) + "px";
+      });
     }
-    document.addEventListener("click", function (e) {
-      if (e.button || (e.target.closest && e.target.closest("[data-fx]"))) return;
-      var w = menuWordAt(e.clientX, e.clientY);
-      if (!w) return;
-      e.preventDefault();
-      e.stopPropagation();
-      goTo(w.href);
-      if (open) closeMenu();   // the menu slides away as the page changes
-    }, true);
+    var wordQueued = false;
+    function queuePlaceWordLinks() {
+      if (wordQueued || !menuWords.length) return;
+      wordQueued = true;
+      requestAnimationFrame(function () { wordQueued = false; placeWordLinks(); });
+    }
+    window.addEventListener("scroll", queuePlaceWordLinks, { capture: true, passive: true });
+    window.addEventListener("resize", queuePlaceWordLinks);
+    // A plain click also sends the menu away, as the page changes. A new-tab click (ctrl / cmd / shift) is the
+    // browser's alone: it opens the tab and nothing else hears of it, so the menu stays as it is - as with any link.
+    wordLayer.addEventListener("click", function (e) {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) { e.stopPropagation(); return; }
+      if (e.button) return;
+      if (open && e.target.closest && e.target.closest("a")) closeMenu();
+    });
 
     // Look every 40ms for up to ms milliseconds until test() is true, then call then(true/false)
     function whenThat(test, ms, then) {
@@ -629,6 +650,8 @@
       bursting = true;
       (function tick() {
         refreshHamburger();
+        markMenuWords();      // the underlines and the links over the words follow the menu while it slides
+        placeWordLinks();
         if (performance.now() < burstUntil) requestAnimationFrame(tick); else bursting = false;
       })();
     }
@@ -808,6 +831,7 @@
     document.body.appendChild(nav);
     document.body.appendChild(menu);
     document.body.appendChild(dock);
+    document.body.appendChild(wordLayer);
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
     // The page itself may still be arriving (this script runs before it), so stay in that
@@ -826,7 +850,7 @@
     }
 
     // from now on the shared checker keeps the hamburger (and its open/closed look) in step
-    refreshNav = function () { syncMenuState(); themeMenu(); placeClock(); markMenuWords(); refreshHamburger(); };
+    refreshNav = function () { syncMenuState(); themeMenu(); placeClock(); markMenuWords(); placeWordLinks(); refreshHamburger(); };
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -1015,7 +1039,6 @@
     function updateState() {
       var t = deepestAt(x, y), clickable = false;
       for (var n = t; n && !clickable; n = outwards(n)) clickable = !!(n.matches && n.matches(CLICKABLE));
-      if (!clickable) clickable = !!menuWordAt(x, y);   // a word of Cargo's menu that works as a link
       document.documentElement.classList.toggle("fx-over-text", overText(x, y));
       setClass("fx-link", clickable);
       setClass("fx-zoom", !!(t && t.nodeType === 1 && pageWantsZoom(t)));
@@ -1065,7 +1088,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v38 loaded");
+    console.log("[fx] navigation + cursor v39 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

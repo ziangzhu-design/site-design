@@ -331,14 +331,36 @@ html.fx-clock-up .fx-clock .fx-clock-bullet { animation-play-state: running; }
 [id="E3223264275"] .page-content a,
 .page[page-url="site-menu"] .page-content a {
   color: inherit !important;
-  text-decoration: underline !important;
-  text-decoration-thickness: 0.06em;
+  text-decoration: underline 0.06em !important;
   text-underline-offset: 0.14em;
 }
 /* The words of Cargo's menu page that site.js makes work as links (it never edits that page's text): drawn
    underlined by the browser's text highlight, which changes nothing but the underline. */
 ::highlight(fx-menu-link) {
-  text-decoration: underline;
+  text-decoration: underline 0.06em;
+  text-underline-offset: 0.14em;
+}
+/* Over each such word site.js puts a real, invisible link (the size of the word) in this layer of its own, so
+   the word works with the keyboard, screen readers, middle-click and the context menu like any link. */
+.fx-wordlinks {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482995;                     /* above the menu page, below the hamburger */
+  pointer-events: none;
+}
+.fx-wordlinks a {
+  position: fixed;
+  display: block;
+  pointer-events: auto;
+  background: transparent;
+  color: var(--fx-menu-ink, #D6C6B0);      /* (the keyboard focus ring takes this color) */
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.fx-wordlinks a[hidden] { display: none; }
+.fx-wordlinks a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 /* (older browsers without text highlights: the menu page's text is underlined instead) */
 html.fx-menu-words [id="E3223264275"] .page-content span,
@@ -431,7 +453,8 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
 @media print {
   .fx-nav,
   .fx-menu,
-  .fx-clock-dock {
+  .fx-clock-dock,
+  .fx-wordlinks {
     display: none;
   }
   .pages {
