@@ -55,7 +55,9 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over
   expandable images (where the browser would show its zoom-in / zoom-out cursor) it morphs into
-  a square, with the same breathing and inverting. It also looks inside Cargo's own components
+  a square, with the same breathing and inverting. The color flip is instant (no fade between the
+  white and the inverted ball); only the cursor's first appearance, its growth over links and the
+  circle-to-square change are animated. It also looks inside Cargo's own components
   (gallery, columns, clock), which keep part of their content in an open "shadow" layer.
 
 ## Loading it in Cargo

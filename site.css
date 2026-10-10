@@ -9,25 +9,25 @@
   margin: -9px 0 0 -9px;
   pointer-events: none;
   z-index: 2147483647;
-  opacity: 0;
-  transition: opacity 0.5s ease;
   will-change: transform;
 }
-.fx-cursor.fx-visible { opacity: 1; }
 
-/* Second layer inverts colors; hidden until the pointer is over text.
-   Cross-fading it with the white layer makes the color change gentle. */
-.fx-cursor.fx-blend { mix-blend-mode: difference; }
-.fx-cursor.fx-blend.fx-visible { opacity: 0; }
-html.fx-over-text .fx-cursor.fx-blend.fx-visible { opacity: 1; }
-html.fx-over-text .fx-cursor:not(.fx-blend).fx-visible { opacity: 0; }
+/* Two stacked balls: the plain white one, and one that inverts what is beneath it (mix-blend-mode).
+   Over text, images and the like the pointer swaps from one to the other INSTANTLY - no fading between
+   them, so the color flips the moment the pointer touches something and back the moment it leaves. */
+.fx-cursor.fx-blend { mix-blend-mode: difference; opacity: 0; }
+html.fx-over-text .fx-cursor.fx-blend { opacity: 1; }
+html.fx-over-text .fx-cursor:not(.fx-blend) { opacity: 0; }
 
-/* Layer 1: grows over clickable things */
+/* Layer 1: grows over clickable things. It is also what fades in when the pointer enters the window
+   and out when it leaves (that fade is not the color change, and stays gentle). */
 .fx-cursor-inner {
   width: 100%;
   height: 100%;
-  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
+.fx-cursor.fx-visible .fx-cursor-inner { opacity: 1; }
 .fx-cursor.fx-link .fx-cursor-inner { transform: scale(1.8); }
 .fx-cursor.fx-down .fx-cursor-inner { transform: scale(0.8); }
 .fx-cursor.fx-link.fx-down .fx-cursor-inner { transform: scale(1.5); }
