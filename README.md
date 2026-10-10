@@ -35,13 +35,13 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   - **Text size:** big - `--fx-menu-font` at the top of `site.css` (36px on a phone, 58px at 1440px
     wide, 72px at most); it replaces the size of Cargo's text style.
   - **Links:** ABOUT goes to `/about-me` and WORKS to `/home` (`MENU_LINKS` at the top of `site.js`; the
-    word `WORK` also matches, whole words only, in any capitals). In the built-in menu they are real links.
-    In Cargo's own menu page the words are Cargo's text, which `site.js` never edits: it underlines them
-    (with the browser's text highlight) and lays a real, invisible link exactly over each word in a layer of
-    its own, so they work with a click or tap, the keyboard (Tab, Enter, with a focus ring), screen readers,
-    middle- and ctrl-click and the context menu. If you make real links in Cargo instead (select the word,
-    Cmd+K > Link to Page), those are left alone and get the same look. A link never changes the text color -
-    it keeps the color of the text round it - and is underlined.
+    word `WORK` also matches, whole words only, in any capitals). A link looks exactly like the text round
+    it: the same color and no underline. In the built-in menu they are real links. In Cargo's own menu page
+    the words are Cargo's text, which `site.js` never edits or restyles: it lays a real, invisible link
+    exactly over each word in a layer of its own, so they work with a click or tap, the keyboard (Tab,
+    Enter, with a focus ring), screen readers, middle- and ctrl-click and the context menu. If you make
+    real links in Cargo instead (select the word, Cmd+K > Link to Page), those are left alone and look the
+    same (no underline, the text's own color).
   - **Colors:** they follow the site background (the `.wallpaper`), with the same pairs as the
     hamburger (`HAMBURGER_COLORS`): the menu takes the background's own color and its text and lines
     take the partner color - #5E6B4E background: #D6C6B0 text and lines, #D6C6B0: #5E6B4E,

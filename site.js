@@ -35,9 +35,9 @@
 
   // The words in the menu that go somewhere (whole words, in any capitals). In the built-in menu below they
   // are real links. In Cargo's own menu page the words are Cargo's text, which this code never edits: it
-  // makes the words work as links where they stand (and underlines them) - unless they are real links made
-  // in Cargo (Cmd+K > Link to Page), which simply get the same look. Same-site paths, so they also work on
-  // a preview address; the text color is never changed (see site.css).
+  // makes the words work as links where they stand - unless they are real links made in Cargo (Cmd+K >
+  // Link to Page), which simply get the same look. Same-site paths, so they also work on a preview address.
+  // A link in the menu looks exactly like the text round it: same color, no underline (see site.css).
   var MENU_LINKS = [
     { words: ["ABOUT"], href: "/about-me" },
     { words: ["WORKS", "WORK"], href: "/home" }
@@ -369,13 +369,12 @@
       document.dispatchEvent(ev);
     }
     // --- the words of Cargo's own menu page work as links, without touching its content ---
-    // The words are found in the page's text (outside any real link) and underlined with the browser's text
-    // highlight, which draws over the text where it stands: nothing in Cargo's page is added or changed.
-    // Over each word sits a real, invisible link in a layer of our own (.fx-wordlinks), the size of the word, so
-    // it is a link for everything: click, tap, keyboard (Tab, Enter), screen readers, middle- and ctrl-click, the
-    // context menu. Cargo takes a click on it as a click on a normal page link.
+    // The words are found in the page's text (outside any real link); nothing in Cargo's page is added or
+    // changed, and the words are not restyled (no underline, no color change). Over each word sits a real,
+    // invisible link in a layer of our own (.fx-wordlinks), the size of the word, so it is a link for
+    // everything: click, tap, keyboard (Tab, Enter), screen readers, middle- and ctrl-click, the context menu.
+    // Cargo takes a click on it as a click on a normal page link.
     var menuWords = [], menuWordsKey = "", nodeIds = new WeakMap(), nextNodeId = 1;
-    var hasHighlights = !!(window.CSS && CSS.highlights && window.Highlight);
     function idOf(node) {
       var i = nodeIds.get(node);
       if (!i) { i = nextNodeId++; nodeIds.set(node, i); }
@@ -407,13 +406,6 @@
         r.setEnd(w.node, w.end);
         return { node: w.node, range: r, href: w.href, start: w.start, end: w.end };
       });
-      if (hasHighlights) {
-        if (menuWords.length) {
-          var h = new Highlight();
-          menuWords.forEach(function (w) { h.add(w.range); });
-          CSS.highlights.set("fx-menu-link", h);
-        } else CSS.highlights.delete("fx-menu-link");
-      } else root.classList.toggle("fx-menu-words", menuWords.length > 0);   // older browsers: site.css underlines the text instead
     }
     // The links over the words: one per line a word is on, moved to follow the word (it slides in with the menu)
     var wordLayer = mk("div", "fx-wordlinks"), wordLinks = [];
@@ -650,7 +642,7 @@
       bursting = true;
       (function tick() {
         refreshHamburger();
-        markMenuWords();      // the underlines and the links over the words follow the menu while it slides
+        markMenuWords();      // the links over the words follow the menu while it slides
         placeWordLinks();
         if (performance.now() < burstUntil) requestAnimationFrame(tick); else bursting = false;
       })();
@@ -1088,7 +1080,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v39 loaded");
+    console.log("[fx] navigation + cursor v40 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
