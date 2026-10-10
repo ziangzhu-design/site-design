@@ -407,6 +407,93 @@
       if (on) menu.removeAttribute("inert"); else menu.setAttribute("inert", "");
     }
 
+    // --- the clock at the bottom of the menu: an analog face and a digital time and date ---
+    // Drawn as one picture (design units from the original artwork: 1003 x 442), so it scales cleanly.
+    // The hands sweep continuously; the digital time and date are the visitor's own. It sits in its own
+    // layer (not inside the menu), slides in and out with the menu, and never takes a click.
+    var MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    var DOTS = [[216.5, 42.5], [299, 78], [358.5, 133], [378.5, 212], [358.5, 291], [299, 346],
+                [216.5, 381.5], [133.5, 346], [74, 291], [54.5, 212], [74, 133], [133.5, 78]];
+    var CX = 216.5, CY = 212;   // the middle of the face
+    var dock = mk("div", "fx-clock-dock");
+    dock.setAttribute("aria-hidden", "true");
+    dock.innerHTML =
+      '<svg class="fx-clock" viewBox="0 0 1003 442" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect class="fx-clock-face" x="0" y="0" width="430" height="442"/>' +
+      '<rect class="fx-clock-bar" x="430" y="0" width="127" height="442"/>' +
+      '<rect class="fx-clock-panel" x="557" y="0" width="446" height="442"/>' +
+      DOTS.map(function (d) { return '<circle class="fx-clock-dot" cx="' + d[0] + '" cy="' + d[1] + '" r="12"/>'; }).join("") +
+      '<g class="fx-hand-hour"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 86) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
+      '<g class="fx-hand-minute"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 160.5) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
+      '<g class="fx-hand-second"><line x1="' + CX + '" y1="' + CY + '" x2="' + CX + '" y2="' + (CY - 162) + '"/></g>' +
+      '<circle class="fx-clock-hub" cx="' + CX + '" cy="' + CY + '" r="12"/>' +
+      '<text class="fx-clock-time" x="596" y="193" font-size="95">00:00am</text>' +
+      '<rect class="fx-clock-rule" x="604" y="217" width="359" height="3"/>' +
+      '<circle class="fx-clock-bullet" cx="623" cy="279" r="23.5"/>' +
+      '<text class="fx-clock-date" x="655" y="311" font-size="95">DEC 1st</text>' +
+      '</svg>';
+    var hourHand = dock.querySelector(".fx-hand-hour"), minuteHand = dock.querySelector(".fx-hand-minute"), secondHand = dock.querySelector(".fx-hand-second");
+    var timeText = dock.querySelector(".fx-clock-time"), dateText = dock.querySelector(".fx-clock-date");
+    var bulletDot = dock.querySelector(".fx-clock-bullet");
+    var clockRun = false, clockLabel = "";
+    function ordinal(n) {
+      if (n % 100 >= 11 && n % 100 <= 13) return "th";
+      return ["th", "st", "nd", "rd"][n % 10 < 4 ? n % 10 : 0];
+    }
+    // The artwork shows a short date ("DEC 1st"). Longer ones ("OCT 10th") would run off the dark panel, so
+    // the date is made just small enough to fit - its bullet shrinks with it - and a short date keeps the
+    // full artwork size. The digital time gets the same treatment (it only ever differs by a few percent).
+    function fitClockText() {
+      timeText.setAttribute("font-size", 95);
+      var tl = timeText.getComputedTextLength();
+      if (tl > 372) timeText.setAttribute("font-size", (95 * 372 / tl).toFixed(2));
+      dateText.setAttribute("font-size", 95);
+      var dl = dateText.getComputedTextLength(), k = dl > 316 ? 316 / dl : 1;
+      dateText.setAttribute("font-size", (95 * k).toFixed(2));
+      var r = 23.5 * k;
+      bulletDot.setAttribute("r", r.toFixed(2));
+      bulletDot.setAttribute("cx", (599.5 + r).toFixed(2));
+      bulletDot.setAttribute("cy", (311 - 32 * k).toFixed(2));
+      dateText.setAttribute("x", (599.5 + 2 * r + 8.5 * k).toFixed(2));
+    }
+    if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", fitClockText);   // the font has arrived: measure again
+    function turn(el, deg) { el.setAttribute("transform", "rotate(" + deg.toFixed(3) + " " + CX + " " + CY + ")"); }
+    function clockFrame() {
+      var d = new Date(), sec = d.getSeconds() + d.getMilliseconds() / 1000, min = d.getMinutes() + sec / 60, hr = (d.getHours() % 12) + min / 60;
+      turn(hourHand, hr * 30);       // 30 degrees an hour
+      turn(minuteHand, min * 6);     // 6 degrees a minute
+      turn(secondHand, sec * 6);     // 6 degrees a second - moving all the time, not once a second
+      var h12 = d.getHours() % 12 || 12, mm = d.getMinutes();
+      var label = (h12 < 10 ? "0" : "") + h12 + ":" + (mm < 10 ? "0" : "") + mm + (d.getHours() < 12 ? "am" : "pm") + "|" + MONTHS[d.getMonth()] + " " + d.getDate() + ordinal(d.getDate());
+      if (label !== clockLabel) {
+        clockLabel = label;
+        var parts = label.split("|");
+        timeText.textContent = parts[0];
+        dateText.textContent = parts[1];
+        fitClockText();
+      }
+    }
+    var calmMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function clockLoop() {
+      if (!clockRun) return;
+      clockFrame();
+      if (calmMotion) setTimeout(clockLoop, 1000 - (Date.now() % 1000));   // visitors who ask for less motion: once a second
+      else requestAnimationFrame(clockLoop);
+    }
+    function clockSet(on) {
+      if (on) {
+        if (!clockRun) { clockRun = true; clockLoop(); }
+      } else {
+        // keep it running while it slides away, then stop drawing frames
+        setTimeout(function () { if (!open) clockRun = false; }, 700);
+      }
+    }
+    // The clock is as wide as the menu (the menu page Cargo draws, if that is what is showing)
+    function placeClock() {
+      var host = cargoShown() ? cargoEl().querySelector(".page-content") : null, w = host ? host.offsetWidth : 0;
+      if (w >= 200) dock.style.setProperty("--fx-clock-w", w + "px"); else dock.style.removeProperty("--fx-clock-w");
+    }
+
     // --- open / close: the icon changes between the hamburger and an X, the menu slides ---
     var open = false, busy = false, viaCargo = false, ignoreSyncUntil = 0, noLinkNoted = false;
     function showState(on) {
@@ -414,6 +501,9 @@
       burger.setAttribute("aria-expanded", on ? "true" : "false");
       burger.setAttribute("aria-label", on ? "Close menu" : "Open menu");
       burger.setAttribute("aria-controls", viaCargo ? CARGO_MENU.pageId : "fx-menu");
+      root.classList.toggle("fx-menu-open", on);
+      clockSet(on);
+      placeClock();
       refreshHamburger();   // the icon now sits on the panel, so it takes the panel's partner color
       burstRefresh(900);    // ...and follows the panel while it slides in or out
     }
@@ -602,6 +692,7 @@
 
     document.body.appendChild(nav);
     document.body.appendChild(menu);
+    document.body.appendChild(dock);
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
     // The page itself may still be arriving (this script runs before it), so stay in that
@@ -620,7 +711,7 @@
     }
 
     // from now on the shared checker keeps the hamburger (and its open/closed look) in step
-    refreshNav = function () { syncMenuState(); themeMenu(); refreshHamburger(); };
+    refreshNav = function () { syncMenuState(); themeMenu(); placeClock(); refreshHamburger(); };
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -708,8 +799,16 @@
       }
       return false;
     }
+    // The clock in the menu is drawn as one picture and never takes a click, so look at its box
+    function overClock(px, py) {
+      if (!document.documentElement.classList.contains("fx-menu-open")) return false;
+      var c = document.querySelector(".fx-clock-dock .fx-clock");
+      if (!c) return false;
+      var r = c.getBoundingClientRect();
+      return px >= r.left && px <= r.right && py >= r.top && py <= r.bottom;
+    }
     function overText(px, py) {
-      if (overRule(px, py)) return true;
+      if (overRule(px, py) || overClock(px, py)) return true;
       var els = [];
       collect(document, px, py, els, 0);
       for (var i = 0; i < els.length; i++) {
@@ -850,7 +949,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v33 loaded");
+    console.log("[fx] navigation + cursor v34 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

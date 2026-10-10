@@ -80,6 +80,7 @@ html.fx-cursor-on *:not([data-fx-probe]) {
   --fx-menu-pad: 1.5rem;                   /* space inside the panel */
   --fx-menu-ms: 0.5s;                      /* how long it takes to slide */
   --fx-menu-font: clamp(2.25rem, 4vw, 4.5rem);   /* size of the text in the menu: 36px on a phone, 58px at 1440px wide, 72px at most */
+  --fx-clock-shadow: 0 0.7rem 1rem -0.65rem rgba(0, 0, 0, 0.3);   /* the very soft shadow beneath the clock (centered: no sideways offset) */
   /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
   --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
 }
@@ -233,6 +234,69 @@ html {
   line-height: 1.1 !important;
 }
 
+/* Inter Semibold for the clock's digital time and date. Loaded from jsDelivr's copy of the npm package
+   @fontsource/inter (SIL Open Font License), under its own name so it never clashes with a font on the site. */
+@font-face {
+  font-family: "FX Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.3.0/files/inter-latin-600-normal.woff2") format("woff2");
+}
+
+/* The clock at the bottom of the site menu: an analog face, then the digital time and date (drawn by
+   site.js as one picture). It is its own layer, as wide as the menu, and slides in and out with it. It
+   never takes a click, so clicks go through to the menu behind it. */
+.fx-clock-dock {
+  position: fixed;
+  right: var(--fx-menu-pad);
+  bottom: calc(var(--fx-menu-pad) + 0.5rem + env(safe-area-inset-bottom, 0px));
+  width: calc(var(--fx-clock-w, max(var(--fx-menu-w), 280px)) - 2 * var(--fx-menu-pad));
+  max-width: calc(100vw - 2 * var(--fx-menu-pad));
+  z-index: 2147482990;                     /* above the menu, below the hamburger */
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(calc(100% + 2 * var(--fx-menu-pad)));
+  transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1), opacity 0.3s ease, visibility 0s linear var(--fx-menu-ms);
+}
+html.fx-menu-open .fx-clock-dock {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition: transform var(--fx-menu-ms) cubic-bezier(0.22, 0.8, 0.2, 1), opacity 0.3s ease, visibility 0s;
+}
+.fx-clock {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-shadow: var(--fx-clock-shadow);
+}
+.fx-clock .fx-clock-face  { fill: #5E6B4E; }
+.fx-clock .fx-clock-bar   { fill: #A0522D; }
+.fx-clock .fx-clock-panel { fill: #2B2A28; }
+.fx-clock .fx-clock-dot,
+.fx-clock .fx-clock-hub,
+.fx-clock .fx-clock-bullet { fill: #D6C6B0; }
+.fx-clock .fx-clock-rule  { fill: #A0522D; }
+.fx-clock .fx-hand-hour line,
+.fx-clock .fx-hand-minute line { stroke: #2B2A28; stroke-width: 7; stroke-linecap: round; }
+.fx-clock .fx-hand-hour circle,
+.fx-clock .fx-hand-minute circle { fill: #2B2A28; }
+.fx-clock .fx-hand-second line { stroke: #D6C6B0; stroke-width: 7; stroke-linecap: round; }
+.fx-clock text {
+  fill: #D6C6B0;
+  font-family: "FX Inter", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.082em;                /* tracking measured from the artwork, row by row */
+  font-kerning: normal;
+}
+.fx-clock .fx-clock-date { letter-spacing: -0.0716em; }
+/* on a short screen there is no room for it under the entries */
+@media (max-height: 520px) {
+  .fx-clock-dock { display: none; }
+}
+
 /* The menu's colors follow the site background (the wallpaper): the menu takes the background's own
    color, and its text and lines take the partner color (the same pairs as the hamburger, set at the
    top of site.js). site.js turns this on with html.fx-menu-themed and sets --fx-menu-paper and
@@ -301,6 +365,7 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
   .fx-menu,
   .fx-menu::before,
   .fx-menu-panel,
+  .fx-clock-dock,
   [id="E3223264275"].page,
   .page[page-url="site-menu"],
   [id="E3223264275"] .page-layout,
@@ -315,7 +380,8 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
 }
 @media print {
   .fx-nav,
-  .fx-menu {
+  .fx-menu,
+  .fx-clock-dock {
     display: none;
   }
   .pages {

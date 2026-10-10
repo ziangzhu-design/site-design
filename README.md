@@ -38,6 +38,16 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
     hamburger (`HAMBURGER_COLORS`): the menu takes the background's own color and its text and lines
     take the partner color - #5E6B4E background: #D6C6B0 text and lines, #D6C6B0: #5E6B4E,
     #2B2A28: #A0522D, #A0522D: #2B2A28. Any other background leaves the menu as designed in Cargo.
+- **Clock in the menu** - at the bottom of the site menu, drawn from the artwork: an analog face
+  (olive tile, tan dots, near-black hour and minute hands with round tails, a thin tan second hand)
+  next to a near-black panel with the digital time (`02:35pm`) and the date (`DEC 1st`), set in
+  Inter Semibold. It shows the visitor's own local time; the hands sweep continuously (once a second
+  for visitors whose device asks for less motion). It has a very soft, centered drop shadow
+  (`--fx-clock-shadow` at the top of `site.css`), slides in and out with the menu, never takes a
+  click, and is hidden on screens shorter than 520px. A longer date ("OCT 10th") is made just small
+  enough to fit. The font is Inter 600 from jsDelivr's copy of the npm package `@fontsource/inter`
+  (SIL Open Font License), declared as "FX Inter" in `site.css`. The drawing is built in `site.js`
+  (design units 1003 x 442, measured from the artwork); the colors are in `site.css`.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, the clock, the hamburger and horizontal rules. Over
   expandable images (where the browser would show its zoom-in / zoom-out cursor) it morphs into
