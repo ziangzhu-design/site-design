@@ -82,7 +82,7 @@ html.fx-cursor-on *:not([data-fx-probe]) {
   --fx-menu-font: clamp(2.25rem, 4vw, 4.5rem);   /* size of the text in the menu: 36px on a phone, 58px at 1440px wide, 72px at most */
   --fx-clock-text-scale: 0.92;             /* the digital time and date inside their panel: 1 = the artwork's size, smaller = more space around them */
   --fx-clock-blink: 2s;                    /* one fade out and in of the dot beside the date */
-  --fx-clock-shadow: 0 0.7rem 1rem -0.65rem rgba(0, 0, 0, 0.3);   /* the very soft shadow beneath the clock (centered: no sideways offset) */
+  --fx-clock-shadow: 0 0.9rem 1.5rem -0.7rem rgba(0, 0, 0, 0.42);   /* the soft shadow beneath the clock (centered: no sideways offset) */
   /* Empty space kept at the top of the page = down to the bottom of the hamburger + the gap */
   --fx-nav-gutter: calc(var(--fx-nav-h) / 2 + var(--fx-icon-h) / 2 + var(--fx-nav-gap));
 }

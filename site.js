@@ -412,12 +412,16 @@
     // The hands sweep continuously; the digital time and date are the visitor's own. It sits in its own
     // layer (not inside the menu), slides in and out with the menu, and never takes a click.
     var MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    var DOTS = [[216.5, 42.5], [299, 78], [358.5, 133], [378.5, 212], [358.5, 291], [299, 346],
-                [216.5, 381.5], [133.5, 346], [74, 291], [54.5, 212], [74, 133], [133.5, 78]];
+    // The face is the olive tile (430 x 442): its centre is the middle of the clock, and the twelve dots sit on
+    // one true circle around it, 30 degrees apart (12 at the top, then 1, 2, 3 ... clockwise).
+    var CX = 215, CY = 221, FACE_R = 168;
+    var DOTS = [];
+    for (var hr = 0; hr < 12; hr++) {
+      DOTS.push([CX + FACE_R * Math.sin(hr * Math.PI / 6), CY - FACE_R * Math.cos(hr * Math.PI / 6)]);
+    }
     // (each tile runs a few units under the next one, so no hairline of the page can show between them)
-    var CX = 216.5, CY = 212;   // the middle of the face
     // Where the digital time, the line and the date sit (design units). The time is a little higher and the
-    // line a little lower than in the artwork, so the tail of a "p" (as in "11:32pm") never touches the line.
+    // line a little lower than in the artwork, so the tail of a "p" (as in "11:32PM") never touches the line.
     var TIME_Y = 190, RULE_Y = 224, DATE_Y = 313;
     var dock = mk("div", "fx-clock-dock");
     dock.setAttribute("aria-hidden", "true");
@@ -426,10 +430,10 @@
       '<rect class="fx-clock-face" x="0" y="0" width="436" height="442"/>' +
       '<rect class="fx-clock-bar" x="430" y="0" width="133" height="442"/>' +
       '<rect class="fx-clock-panel" x="557" y="0" width="446" height="442"/>' +
-      DOTS.map(function (d) { return '<circle class="fx-clock-dot" cx="' + d[0] + '" cy="' + d[1] + '" r="12"/>'; }).join("") +
+      DOTS.map(function (d) { return '<circle class="fx-clock-dot" cx="' + d[0].toFixed(2) + '" cy="' + d[1].toFixed(2) + '" r="12"/>'; }).join("") +
       '<g class="fx-hand-hour"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 86) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
-      '<g class="fx-hand-minute"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 160.5) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
-      '<g class="fx-hand-second"><line x1="' + CX + '" y1="' + CY + '" x2="' + CX + '" y2="' + (CY - 162) + '"/></g>' +
+      '<g class="fx-hand-minute"><line x1="' + CX + '" y1="' + (CY + 31.5) + '" x2="' + CX + '" y2="' + (CY - 162) + '"/><circle cx="' + CX + '" cy="' + (CY + 31.5) + '" r="8"/></g>' +
+      '<g class="fx-hand-second"><line x1="' + CX + '" y1="' + CY + '" x2="' + CX + '" y2="' + (CY - 164) + '"/></g>' +
       '<circle class="fx-clock-hub" cx="' + CX + '" cy="' + CY + '" r="12"/>' +
       '<g class="fx-clock-digital">' +
       '<text class="fx-clock-time" x="596" y="' + TIME_Y + '" font-size="95">00:00am</text>' +
@@ -471,7 +475,7 @@
       turn(minuteHand, min * 6);     // 6 degrees a minute
       turn(secondHand, sec * 6);     // 6 degrees a second - moving all the time, not once a second
       var h12 = d.getHours() % 12 || 12, mm = d.getMinutes();
-      var label = (h12 < 10 ? "0" : "") + h12 + ":" + (mm < 10 ? "0" : "") + mm + (d.getHours() < 12 ? "am" : "pm") + "|" + MONTHS[d.getMonth()] + " " + d.getDate() + ordinal(d.getDate());
+      var label = (h12 < 10 ? "0" : "") + h12 + ":" + (mm < 10 ? "0" : "") + mm + (d.getHours() < 12 ? "AM" : "PM") + "|" + MONTHS[d.getMonth()] + " " + d.getDate() + ordinal(d.getDate());
       if (label !== clockLabel) {
         clockLabel = label;
         var parts = label.split("|");
@@ -971,7 +975,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v36 loaded");
+    console.log("[fx] navigation + cursor v37 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

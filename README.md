@@ -39,8 +39,8 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
     take the partner color - #5E6B4E background: #D6C6B0 text and lines, #D6C6B0: #5E6B4E,
     #2B2A28: #A0522D, #A0522D: #2B2A28. Any other background leaves the menu as designed in Cargo.
 - **Clock in the menu** - at the bottom of the site menu, drawn from the artwork: an analog face
-  (olive tile, tan dots, near-black hour and minute hands with round tails, a thin tan second hand)
-  next to a near-black panel with the digital time (`02:35pm`) and the date (`DEC 1st`), set in
+  (olive tile, twelve tan dots on one true circle at the hour positions, centered in the tile, near-black hour and minute hands with round tails, a thin tan second hand)
+  next to a near-black panel with the digital time (`02:35PM`) and the date (`DEC 1st`), set in
   Inter Semibold. It shows the visitor's own local time; the hands sweep continuously (once a second
   for visitors whose device asks for less motion). It has a very soft, centered drop shadow
   (`--fx-clock-shadow` at the top of `site.css`), slides in and out with the menu, never takes a
