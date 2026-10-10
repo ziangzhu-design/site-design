@@ -324,6 +324,28 @@ html.fx-clock-up .fx-clock .fx-clock-bullet { animation-play-state: running; }
   .fx-clock-dock { display: none; }
 }
 
+/* Links in the menu - the built-in menu's, and any made in Cargo's own menu page. The text color is never
+   changed: a link keeps the color of the text round it (including the color that follows the site
+   background, below), and is underlined. */
+.fx-menu-panel a,
+[id="E3223264275"] .page-content a,
+.page[page-url="site-menu"] .page-content a {
+  color: inherit !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.14em;
+}
+/* The words of Cargo's menu page that site.js makes work as links (it never edits that page's text): drawn
+   underlined by the browser's text highlight, which changes nothing but the underline. */
+::highlight(fx-menu-link) {
+  text-decoration: underline;
+}
+/* (older browsers without text highlights: the menu page's text is underlined instead) */
+html.fx-menu-words [id="E3223264275"] .page-content span,
+html.fx-menu-words .page[page-url="site-menu"] .page-content span {
+  text-decoration: underline;
+}
+
 /* The menu's colors follow the site background (the wallpaper): the menu takes the background's own
    color, and its text and lines take the partner color (the same pairs as the hamburger, set at the
    top of site.js). site.js turns this on with html.fx-menu-themed and sets --fx-menu-paper and

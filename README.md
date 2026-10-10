@@ -34,6 +34,12 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
     built-in menu is used straight away for a minute (kept in `sessionStorage`).
   - **Text size:** big - `--fx-menu-font` at the top of `site.css` (36px on a phone, 58px at 1440px
     wide, 72px at most); it replaces the size of Cargo's text style.
+  - **Links:** ABOUT goes to `/about-me` and WORKS to `/home` (`MENU_LINKS` at the top of `site.js`; the
+    word `WORK` also matches). In the built-in menu they are real links. In Cargo's own menu page the
+    words are Cargo's text, which `site.js` never edits: it underlines the words (with the browser's text
+    highlight) and makes a click on one go there, like a click on a normal link. If you make real links in
+    Cargo (select the word, Cmd+K > Link to Page), those are left alone and get the same look. A link never
+    changes the text color - it keeps the color of the text round it - and is underlined.
   - **Colors:** they follow the site background (the `.wallpaper`), with the same pairs as the
     hamburger (`HAMBURGER_COLORS`): the menu takes the background's own color and its text and lines
     take the partner color - #5E6B4E background: #D6C6B0 text and lines, #D6C6B0: #5E6B4E,

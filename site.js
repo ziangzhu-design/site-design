@@ -33,14 +33,25 @@
   // needs the same ones for the slide animation.
   var CARGO_MENU = { slug: "site-menu", pageId: "E3223264275", openLinkText: "MENU", closeLinkText: "CLOSE" };
 
+  // The words in the menu that go somewhere (whole words, in any capitals). In the built-in menu below they
+  // are real links. In Cargo's own menu page the words are Cargo's text, which this code never edits: it
+  // makes the words work as links where they stand (and underlines them) - unless they are real links made
+  // in Cargo (Cmd+K > Link to Page), which simply get the same look. Same-site paths, so they also work on
+  // a preview address; the text color is never changed (see site.css).
+  var MENU_LINKS = [
+    { words: ["ABOUT"], href: "/about-me" },
+    { words: ["WORKS", "WORK"], href: "/home" }
+  ];
+
   // If that does not open Cargo's menu the hamburger shows this built-in copy of the menu instead,
   // so the site never ends up with a dead button. It is the content of the
   // "site menu" page (a line, the entries, a line); its look (30% wide, olive, padding, darkened
-  // page) is in site.css. Edit the entries here. To make one a link, write it like
-  // <a href="/works">WORKS</a>.
+  // page) is in site.css. The entries and where they go are MENU_LINKS above.
   var MENU_HTML =
     '<hr>' +
-    '<div style="text-align: left;"><span class="cmsubtitlebasic">ABOUT<br>WORKS</span></div>' +
+    '<div style="text-align: left;"><span class="cmsubtitlebasic">' +
+    MENU_LINKS.map(function (l) { return '<a href="' + l.href + '">' + l.words[0] + '</a>'; }).join("<br>") +
+    '</span></div>' +
     '<hr>';
   var COLOR_TOLERANCE = 8;   // how far off (in RGB steps) a page color may be and still count as a match
 
@@ -118,6 +129,7 @@
   // Cargo changes the page without telling us (page swaps, color fades), so keep checking:
   // right after DOM changes, when the tab comes back, and on a steady beat for the rest.
   var refreshNav = function () {};   // replaced once the bar exists
+  var menuWordAt = function () { return null; };   // replaced once the bar exists: which menu word (if any) is at a point
   function refreshAll() {
     if (document.hidden) return;
     matchBackground();
@@ -357,6 +369,83 @@
       ev.fxOwn = true;   // our own handler below ignores it
       document.dispatchEvent(ev);
     }
+    // --- the words of Cargo's own menu page work as links, and are underlined, without touching its content ---
+    // The words are found in the page's text (not inside a real link), underlined with the browser's text
+    // highlight (it draws over the text where it stands: no element is added or changed), and a click on one
+    // goes where MENU_LINKS says - the way a click on a normal link goes, so Cargo takes it as a page link.
+    var menuWords = [], menuWordsKey = "", nodeIds = new WeakMap(), nextNodeId = 1;
+    var hasHighlights = !!(window.CSS && CSS.highlights && window.Highlight);
+    function idOf(node) {
+      var i = nodeIds.get(node);
+      if (!i) { i = nextNodeId++; nodeIds.set(node, i); }
+      return i;
+    }
+    function markMenuWords() {
+      var el = cargoEl(), found = [], key = "";
+      if (el && cargoOn()) {
+        var walk = document.createTreeWalker(el.querySelector(".page-content") || el, 4 /* text */);
+        for (var node = walk.nextNode(); node; node = walk.nextNode()) {
+          if (!node.nodeValue.trim() || (node.parentElement && node.parentElement.closest("a, button, [role='button']"))) continue;
+          var re = /[A-Za-z]+/g, m;
+          while ((m = re.exec(node.nodeValue))) {
+            for (var i = 0; i < MENU_LINKS.length; i++) {
+              if (MENU_LINKS[i].words.indexOf(m[0].toUpperCase()) < 0) continue;
+              found.push({ node: node, start: m.index, end: m.index + m[0].length, href: MENU_LINKS[i].href });
+              key += idOf(node) + ":" + m.index + ":" + MENU_LINKS[i].href + ";";
+            }
+          }
+        }
+      }
+      if (key === menuWordsKey && menuWords.every(function (w) { return w.node.isConnected; })) return;   // nothing changed
+      menuWordsKey = key;
+      menuWords = found.map(function (w) {
+        var r = document.createRange();
+        r.setStart(w.node, w.start);
+        r.setEnd(w.node, w.end);
+        return { node: w.node, range: r, href: w.href };
+      });
+      if (hasHighlights) {
+        if (menuWords.length) {
+          var h = new Highlight();
+          menuWords.forEach(function (w) { h.add(w.range); });
+          CSS.highlights.set("fx-menu-link", h);
+        } else CSS.highlights.delete("fx-menu-link");
+      } else root.classList.toggle("fx-menu-words", menuWords.length > 0);   // older browsers: site.css underlines the text instead
+    }
+    menuWordAt = function (px, py) {
+      if (!menuWords.length || !cargoShown()) return null;
+      var el = document.elementFromPoint(px, py), cargo = cargoEl();
+      if (!el || !cargo || !cargo.contains(el) || (el.closest && el.closest("a, button, [role='button'], input"))) return null;
+      for (var i = 0; i < menuWords.length; i++) {
+        var rects = menuWords[i].range.getClientRects();
+        for (var j = 0; j < rects.length; j++) {
+          var r = rects[j];
+          if (px >= r.left - 2 && px <= r.right + 2 && py >= r.top - 2 && py <= r.bottom + 2) return menuWords[i];
+        }
+      }
+      return null;
+    };
+    function goTo(href) {
+      var a = document.createElement("a");
+      a.href = href;
+      a.tabIndex = -1;
+      a.setAttribute("data-fx", "");
+      a.setAttribute("aria-hidden", "true");
+      a.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden";
+      document.body.appendChild(a);
+      a.click();   // as a click on a link: Cargo takes it as a normal page link (or the browser goes there)
+      setTimeout(function () { a.remove(); }, 1500);
+    }
+    document.addEventListener("click", function (e) {
+      if (e.button || (e.target.closest && e.target.closest("[data-fx]"))) return;
+      var w = menuWordAt(e.clientX, e.clientY);
+      if (!w) return;
+      e.preventDefault();
+      e.stopPropagation();
+      goTo(w.href);
+      if (open) closeMenu();   // the menu slides away as the page changes
+    }, true);
+
     // Look every 40ms for up to ms milliseconds until test() is true, then call then(true/false)
     function whenThat(test, ms, then) {
       var t0 = performance.now();
@@ -737,7 +826,7 @@
     }
 
     // from now on the shared checker keeps the hamburger (and its open/closed look) in step
-    refreshNav = function () { syncMenuState(); themeMenu(); placeClock(); refreshHamburger(); };
+    refreshNav = function () { syncMenuState(); themeMenu(); placeClock(); markMenuWords(); refreshHamburger(); };
   }
 
   // Only build the bar once site.css has loaded, so it never flashes unstyled.
@@ -926,6 +1015,7 @@
     function updateState() {
       var t = deepestAt(x, y), clickable = false;
       for (var n = t; n && !clickable; n = outwards(n)) clickable = !!(n.matches && n.matches(CLICKABLE));
+      if (!clickable) clickable = !!menuWordAt(x, y);   // a word of Cargo's menu that works as a link
       document.documentElement.classList.toggle("fx-over-text", overText(x, y));
       setClass("fx-link", clickable);
       setClass("fx-zoom", !!(t && t.nodeType === 1 && pageWantsZoom(t)));
@@ -975,7 +1065,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v37 loaded");
+    console.log("[fx] navigation + cursor v38 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
