@@ -203,7 +203,8 @@
     // --- the menu's colors follow the site background (the wallpaper) ---
     // The same pairs as the hamburger: the menu takes the background's own color, and its text and
     // lines take the partner color. site.css paints it (html.fx-menu-themed); a background that is not
-    // in the list leaves the menu as designed in Cargo.
+    // in the list leaves the menu as designed in Cargo. The clock in the menu has its own set of colors for
+    // each of these backgrounds too: html gets data-fx-menu-bg="5E6B4E" (the background's hex, no #) for it.
     var themedFor = "";
     function themeMenu() {
       var bg = wallpaperColor() || pageBackground(true), pair = bg ? partnerFor(bg) : null;
@@ -214,10 +215,12 @@
           root.style.setProperty("--fx-menu-paper", pair.page);
           root.style.setProperty("--fx-menu-ink", pair.icon);
           root.classList.add("fx-menu-themed");
+          root.setAttribute("data-fx-menu-bg", pair.page.replace("#", "").toUpperCase());
         } else {
           root.style.removeProperty("--fx-menu-paper");
           root.style.removeProperty("--fx-menu-ink");
           root.classList.remove("fx-menu-themed");
+          root.removeAttribute("data-fx-menu-bg");
         }
       }
       // A line drawn as a filled strip (no border) needs the color as its background; a bordered one
@@ -1080,7 +1083,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v40 loaded");
+    console.log("[fx] navigation + cursor v41 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();
