@@ -59,13 +59,13 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   ask for less motion, paused while the menu is closed). The font is Inter 600 from jsDelivr's copy of the npm package `@fontsource/inter`
   (SIL Open Font License), declared as "FX Inter" in `site.css`. The drawing is built in `site.js`
   (design units 1003 x 442, measured from the artwork); the colors are in `site.css`.
-  The clock's colors change with the color of the menu (the site background): the artwork's own set
-  for the tan menu and for any other background, and a set for each of the olive, near-black and
-  sienna menus - olive menu: tan face, olive dots, sweeping hand and middle dot; near-black menu: sienna
-  face, near-black dots, sweeping hand and middle dot, tan hour and minute hands, olive center block,
-  tan digital panel with olive time, line, date and dot; sienna menu: the same but with a near-black face
-  and sienna dots, sweeping hand and middle dot. They are the `--fx-clock-*` colors in `site.css`
-  (site.js puts the menu's color on `<html>` as `data-fx-menu-bg`).
+  The clock's colors change with the color of the menu (the site background): olive menu - tan face, olive
+  dots, sweeping hand and middle dot (this is also the set for any background that is not one of the four
+  colors, since the menu is olive then); tan menu - the artwork's own colors (olive face, tan dots); near-black
+  menu - sienna face, near-black dots, sweeping hand and middle dot, tan hour and minute hands, olive center
+  block, tan digital panel with olive time, line, date and dot; sienna menu - the same with a near-black face
+  and sienna dots, sweeping hand and middle dot. They are the `--fx-clock-*` colors in `site.css` (site.js
+  puts the menu's color on `<html>` as `data-fx-menu-bg`).
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over

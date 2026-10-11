@@ -279,25 +279,26 @@ html.fx-clock-up .fx-clock-dock {
   height: auto;
   box-shadow: var(--fx-clock-shadow);
 }
-/* The clock's colors. They change with the color of the menu (which is the site background's color): the
-   set below is the artwork's own, used for the tan menu and for any background not listed; the three sets
-   after it are for the olive, the near-black and the sienna menu. site.js puts the menu's color on <html>
-   as data-fx-menu-bg="5E6B4E" (and so on); the hex values are the site's four colors. */
+/* The clock's colors. They change with the color of the menu (which is the site background's color). The
+   set in the first rule below is for the olive menu - which is also how the menu looks for a background that
+   is not one of the four colors (it stays olive, as designed in Cargo). The other three blocks are for the
+   tan (the artwork's own colors), near-black and sienna menus. site.js puts the menu's color on <html> as
+   data-fx-menu-bg="5E6B4E" (and so on); the hex values are the site's four colors. */
 .fx-clock {
-  --fx-clock-face: #5E6B4E;                /* the analog clock's background */
-  --fx-clock-dots: #D6C6B0;                /* the twelve dots on its face */
+  --fx-clock-face: #D6C6B0;                /* the analog clock's background */
+  --fx-clock-dots: #5E6B4E;                /* the twelve dots on its face */
   --fx-clock-hands: #2B2A28;               /* the hour and minute hands */
-  --fx-clock-sweep: #D6C6B0;               /* the sweeping hand, and the little dot in the middle it turns on */
+  --fx-clock-sweep: #5E6B4E;               /* the sweeping hand, and the little dot in the middle it turns on */
   --fx-clock-bar: #A0522D;                 /* the block between the analog clock and the digital panel */
   --fx-clock-panel: #2B2A28;               /* the background of the digital time and date */
   --fx-clock-text: #D6C6B0;                /* the digital time and the date */
   --fx-clock-rule: #A0522D;                /* the line between them */
   --fx-clock-bullet: #D6C6B0;              /* the blinking dot beside the date */
 }
-html[data-fx-menu-bg="5E6B4E"] .fx-clock {            /* olive menu */
-  --fx-clock-face: #D6C6B0;
-  --fx-clock-dots: #5E6B4E;
-  --fx-clock-sweep: #5E6B4E;
+html[data-fx-menu-bg="D6C6B0"] .fx-clock {            /* tan menu: the artwork's own colors */
+  --fx-clock-face: #5E6B4E;
+  --fx-clock-dots: #D6C6B0;
+  --fx-clock-sweep: #D6C6B0;
 }
 html[data-fx-menu-bg="2B2A28"] .fx-clock {            /* near-black menu */
   --fx-clock-face: #A0522D;
