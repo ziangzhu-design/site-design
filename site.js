@@ -232,9 +232,7 @@
       }
     }
     var lastIcon = "";
-    var veilHold = false;   // true while the page-change fade covers the page: the icon keeps its color until the fade starts to lift
     function refreshHamburger() {
-      if (veilHold) return;
       var bg = pageBackground();
       var icon = bg ? hamburgerFor(bg) : DEFAULT_HAMBURGER;
       if (icon === lastIcon) return;
@@ -269,18 +267,11 @@
 
     // Count what Cargo's router does to the address (nothing is changed: every call goes straight through),
     // so a jump to the menu as an ordinary page can be undone exactly.
-    // It also tells the page-change fade (further down) that the address may just have changed.
     var pushes = 0, replaces = 0;
-    var routeHook = function () {};
     ["pushState", "replaceState"].forEach(function (k) {
       try {
         var orig = history[k];
-        history[k] = function () {
-          if (k === "pushState") pushes++; else replaces++;
-          var r = orig.apply(this, arguments);
-          try { routeHook(); } catch (e) {}
-          return r;
-        };
+        history[k] = function () { if (k === "pushState") pushes++; else replaces++; return orig.apply(this, arguments); };
       } catch (e) {}
     });
 
@@ -832,150 +823,10 @@
     menu.addEventListener("touchmove", holdPage, { passive: false });
     panel.addEventListener("transitionend", refreshHamburger);
 
-    // --- the fade between pages ---
-    // When a link to another page of the site is clicked, the page is covered by a flat layer in the color it
-    // had (its background / wallpaper), which then fades away while turning into the color of the page that
-    // has come in: about half a second in all (--fx-page-in + --fx-page-out in site.css). Nothing is held back:
-    // the click, the address and Cargo's own page change run as always, the layer only paints over them.
-    // It starts when the address actually changes after such a click (so a click that goes nowhere shows
-    // nothing), and lifts once the new page has settled. If the browser does a full page load instead, the
-    // color is carried over to the new page in sessionStorage. Not for back/forward, nor with reduced motion.
-    var VEIL_IN = 120, VEIL_OUT = 380;   // ms; the defaults of --fx-page-in / --fx-page-out
-    var VEIL_SETTLE_MS = 100;   // the new page must have stopped changing this long before the layer lifts
-    var VEIL_STALE_MS = 700;    // no change of page seen this long after the layer came up: lift it anyway
-    var VEIL_MAX_MS = 2500;     // never keep the page covered longer than this
-    var VEIL_WATCH_MS = 1500;   // after a click, wait this long for the address to change (Cargo may fetch the page first)
-    var VEIL_KEY = "fx-page-veil";
-    var veil = mk("div", "fx-veil");
-    veil.setAttribute("aria-hidden", "true");
-    var veilAsk = null, veilOn = false, veilSeq = 0, veilWatch = 0, veilWait = 0, veilDone = 0;
-
-    function cssMs(name, dflt) {
-      var v = getComputedStyle(root).getPropertyValue(name).trim(), n = parseFloat(v);
-      if (isNaN(n)) return dflt;
-      return /ms$/.test(v) ? n : /s$/.test(v) ? n * 1000 : n;
-    }
-    function motionOk() {
-      try { return !matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return true; }
-    }
-    // A fingerprint of the pages in the DOM: changes when a page comes in or goes out or fills up
-    var pageIds = new WeakMap(), nextPageId = 1;
-    function pagesKey() {
-      var ps = document.querySelectorAll(".page"), out = [];
-      for (var i = 0; i < ps.length; i++) {
-        var id = pageIds.get(ps[i]);
-        if (!id) { id = nextPageId++; pageIds.set(ps[i], id); }
-        out.push(id + ":" + (ps[i].getAttribute("page-url") || "") + ":" + ps[i].getElementsByTagName("*").length);
-      }
-      return out.join("|");
-    }
-    // The address a click on this link leads to, if it is another page of this site; otherwise null
-    function veilTarget(e) {
-      if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return null;
-      var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
-      if (!a) return null;
-      var tg = (a.getAttribute("target") || "").toLowerCase();
-      if ((tg && tg !== "_self") || a.hasAttribute("download")) return null;
-      try {
-        var u = new URL(a.getAttribute("href"), location.href), p = pathOf(u.pathname);
-        if (!/^https?:$/.test(u.protocol) || u.origin !== location.origin || p === menuPath) return null;
-        return (p !== nowPath() || u.search !== location.search) ? u : null;
-      } catch (x) { return null; }
-    }
-
-    function veilCover(color) {
-      var ms = cssMs("--fx-page-in", VEIL_IN);
-      if (!veilOn) {   // coming up from nothing: the color is set first, with no fade of its own
-        veil.style.transition = "none";
-        veil.style.backgroundColor = color;
-        void veil.offsetWidth;
-      }
-      veil.style.transition = "opacity " + ms + "ms ease-out, background-color " + ms + "ms ease-out";
-      veil.style.backgroundColor = color;
-      veil.style.opacity = "1";
-      veilOn = true;
-      veilHold = true;
-    }
-    function veilReveal() {
-      veilHold = false;
-      var to = pageBackground(true), ms = cssMs("--fx-page-out", VEIL_OUT);
-      refreshHamburger();   // the icon takes the new page's color while the layer lifts
-      veil.style.transition = "opacity " + ms + "ms ease, background-color " + ms + "ms ease";
-      if (to) veil.style.backgroundColor = rgb(to);
-      veil.style.opacity = "0";
-      clearTimeout(veilDone);
-      veilDone = setTimeout(function () { veil.style.transition = "none"; veilOn = false; }, ms + 80);
-    }
-    // Keep looking until the new page is in and has settled, then lift the layer
-    function veilWaitFor(ready, ask) {
-      var seq = ++veilSeq, t0 = performance.now(), last = ask ? ask.key : "", changedAt = 0;
-      clearTimeout(veilWait);
-      clearTimeout(veilDone);
-      (function look() {
-        if (seq !== veilSeq) return;
-        var now = performance.now(), key = pagesKey();
-        if (key !== last) { last = key; changedAt = now; }
-        if (now - t0 >= VEIL_MAX_MS || ready(now - t0, changedAt ? now - changedAt : -1)) return veilReveal();
-        veilWait = setTimeout(look, 40);
-      })();
-    }
-    function askStop() { veilAsk = null; clearInterval(veilWatch); }
-    // Has the address changed since the click? Then the page is changing: cover it.
-    routeHook = function () {
-      var a = veilAsk;
-      if (!a) return;
-      if (nowPath() === menuPath) return askStop();   // the menu's own address: not a page change
-      if (nowPath() === a.path && location.search === a.search) return;   // still the same address
-      askStop();
-      veilCover(a.color);
-      var inMs = cssMs("--fx-page-in", VEIL_IN);
-      veilWaitFor(function (since, quiet) {
-        return since >= inMs && (quiet >= VEIL_SETTLE_MS || (quiet < 0 && since >= VEIL_STALE_MS));
-      }, a);
-    };
-    document.addEventListener("click", function (e) {
-      if (!e.isTrusted || nowPath() === menuPath || !motionOk() || !veilTarget(e)) return;
-      var from = pageBackground(true);
-      if (!from) return;
-      askStop();
-      veilAsk = { t: performance.now(), color: rgb(from), path: nowPath(), search: location.search, key: pagesKey() };
-      veilWatch = setInterval(function () {
-        routeHook();
-        if (veilAsk && performance.now() - veilAsk.t > VEIL_WATCH_MS) askStop();
-      }, 40);
-    }, true);
-    // A full page load (Cargo didn't take the link): the new page starts covered in the old page's color
-    window.addEventListener("pagehide", function () {
-      var c = veilAsk && performance.now() - veilAsk.t < 2000 ? veilAsk.color : veilOn ? veil.style.backgroundColor : "";
-      try { if (c) sessionStorage.setItem(VEIL_KEY, JSON.stringify({ c: c, t: Date.now() })); } catch (e) {}
-    });
-    window.addEventListener("pageshow", function (e) {
-      if (!e.persisted) return;   // back to a page kept in memory: show it as it was
-      try { sessionStorage.removeItem(VEIL_KEY); } catch (x) {}
-      askStop();
-      veilSeq++;
-      veilHold = false;
-      veil.style.transition = "none";
-      veil.style.opacity = "0";
-      veilOn = false;
-    });
-    try {
-      var carried = JSON.parse(sessionStorage.getItem(VEIL_KEY) || "null"), cc = carried && parseColor(carried.c);
-      if (carried) sessionStorage.removeItem(VEIL_KEY);
-      if (cc && Date.now() - carried.t < 8000 && motionOk() && nowPath() !== menuPath) {
-        veil.style.backgroundColor = rgb(cc);
-        veil.style.opacity = "1";
-        veilOn = true;
-        veilHold = true;
-        veilWaitFor(function (since) { return document.readyState === "complete" && since >= 150; }, null);
-      }
-    } catch (e) {}
-
     document.body.appendChild(nav);
     document.body.appendChild(menu);
     document.body.appendChild(dock);
     document.body.appendChild(wordLayer);
-    document.body.appendChild(veil);
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
     // The page itself may still be arriving (this script runs before it), so stay in that
@@ -1232,7 +1083,7 @@
   }
 
   function start() {
-    console.log("[fx] navigation + cursor v42 loaded");
+    console.log("[fx] navigation + cursor v41 loaded");
     keepInSync();
     whenStyled(fxNav);
     fxCursor();

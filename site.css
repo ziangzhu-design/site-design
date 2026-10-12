@@ -485,29 +485,11 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
     transition: none;
   }
 }
-/* ===================================================================
-   Page change - a quick, soft color fade when a link leads to another page.
-   site.js puts this flat layer over the page in the color the page had, then lets it fade away while it
-   turns into the new page's color (the wallpaper / background). It never takes a click.
-   In total: --fx-page-in (the layer comes up) + --fx-page-out (it lifts) = about half a second.
-   =================================================================== */
-:root {
-  --fx-page-in: 120ms;
-  --fx-page-out: 380ms;
-}
-.fx-veil {
-  position: fixed;
-  inset: 0;
-  z-index: 2147482999;                     /* over the page and the menu, under the hamburger and the cursor */
-  pointer-events: none;
-  opacity: 0;
-}
 @media print {
   .fx-nav,
   .fx-menu,
   .fx-clock-dock,
-  .fx-wordlinks,
-  .fx-veil {
+  .fx-wordlinks {
     display: none;
   }
   .pages {
