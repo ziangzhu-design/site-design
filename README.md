@@ -66,6 +66,19 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   block, tan digital panel with olive time, line, date and dot; sienna menu - the same with a near-black face
   and sienna dots, sweeping hand and middle dot. They are the `--fx-clock-*` colors in `site.css` (site.js
   puts the menu's color on `<html>` as `data-fx-menu-bg`).
+- **Page change fade** - clicking a link to another page of the site gives a quick, soft color fade
+  of about half a second. A flat layer in the color the page had (its background / wallpaper) comes up
+  over the page (`--fx-page-in`, 120ms), then fades away (`--fx-page-out`, 380ms) while turning into the
+  color of the page that came in; if two pages share a color, the page just fades in from that color. It
+  works for every page, and for the links in the menu. Nothing is held back or taken over: the click, the
+  address and Cargo's own page change run as always, and the layer never takes a click. It starts when the
+  address really changes after such a click, so a click that goes nowhere (an anchor on the same page, a
+  new-tab, ctrl/shift click, a download, an overlay) shows nothing, and it lifts once the new page has
+  settled (never later than 2.5 seconds). The hamburger keeps its color under the layer and takes the new
+  page's color as the layer lifts. If the browser does a full page load instead (a link Cargo does not take),
+  the old color is carried over in `sessionStorage` and the new page fades in from it. No fade for the back
+  and forward buttons, the very first load of the site, or visitors who ask for less motion. The two
+  durations are at the top of the page-change section in `site.css`.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over
