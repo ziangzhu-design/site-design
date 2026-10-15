@@ -43,17 +43,9 @@
     { words: ["WORKS", "WORK"], href: "/home" }
   ];
 
-  // The page change (a colored rectangle with a drawing on it fades over the page when a link to another page is
-  // clicked). Its color is the color of the page being opened, and the drawing - twelve dots and a line - is
-  // colored by that color, the four designs: dots and line on a #D6C6B0 page are #A0522D and #5E6B4E, on a #2B2A28
-  // page #D6C6B0 and #A0522D, on a #5E6B4E page #2B2A28 and #D6C6B0, on a #A0522D page #D6C6B0 and #2B2A28.
-  // Any other page color gets the plain rectangle, no drawing.
-  var VEIL_ART = [
-    { page: "#D6C6B0", dots: "#A0522D", line: "#5E6B4E" },
-    { page: "#2B2A28", dots: "#D6C6B0", line: "#A0522D" },
-    { page: "#5E6B4E", dots: "#2B2A28", line: "#D6C6B0" },
-    { page: "#A0522D", dots: "#D6C6B0", line: "#2B2A28" }
-  ];
+  // The page change: a plain rectangle in the color of the page being opened (its background / wallpaper - #D6C6B0,
+  // #2B2A28, #5E6B4E, #A0522D or whatever the page is) fades in over the page when a link to another page is clicked,
+  // and fades away again over the new page.
   // The color of a page is read from the page itself (its background / wallpaper) and remembered in the visitor's
   // browser, so from the second visit the rectangle already has the right color the moment a link is clicked; the very
   // first time a page is opened the rectangle starts out in the current page's color and turns into the new page's
@@ -71,7 +63,7 @@
   var MENU_HTML =
     '<hr>' +
     '<div style="text-align: left;"><span class="cmsubtitlebasic">' +
-    MENU_LINKS.map(function (l) { return '<a href="' + l.href + '">' + l.words[0] + '</a>'; }).join("<br>") +
+    MENU_LINKS.map(function (l) { return '<a href="' + l.href + '" rel="history">' + l.words[0] + '</a>'; }).join("<br>") +
     '</span></div>' +
     '<hr>';
   var COLOR_TOLERANCE = 8;   // how far off (in RGB steps) a page color may be and still count as a match
@@ -442,6 +434,11 @@
     }
     // The links over the words: one per line a word is on, moved to follow the word (it slides in with the menu)
     var wordLayer = mk("div", "fx-wordlinks"), wordLinks = [];
+    // a link made in Cargo says how its router takes a link to a page (rel="history"): ours say the same, so they are taken the same way
+    function wordRel() {
+      var ref = document.querySelector('a[rel~="history"]:not([data-fx])');
+      return ref && !ref.closest(".fx-wordlinks, .fx-menu") ? ref.getAttribute("rel") : "history";
+    }
     function placeWordLinks() {
       var want = [];
       if (menuWords.length && cargoShown()) {
@@ -467,6 +464,7 @@
         link.__fxKey = key;
         link.hidden = false;
         link.setAttribute("href", w.href);
+        link.setAttribute("rel", wordRel());
         link.setAttribute("aria-label", w.label);
         if (w.first) { link.removeAttribute("tabindex"); link.removeAttribute("aria-hidden"); }
         else { link.tabIndex = -1; link.setAttribute("aria-hidden", "true"); }   // a word on two lines is announced once
@@ -854,9 +852,8 @@
     panel.addEventListener("transitionend", refreshHamburger);
 
     // --- the page change ---
-    // Clicking a link to another page of the site: a rectangle in the color of the page being opened, with the
-    // drawing for that color on it (VEIL_ART at the top), fades in over the whole page and its content, the page
-    // changes underneath, and the rectangle fades away again - about half a second in all (--fx-page-in and
+    // Clicking a link to another page of the site: a rectangle in the color of the page being opened fades in over the
+    // whole page and its content, the page changes underneath, and the rectangle fades away again - about half a second in all (--fx-page-in and
     // --fx-page-out in site.css; both fades ease in and out). To get the order right the click is held back for the
     // length of the fade-in (a fraction of a second) and then handed to the page again as an ordinary click, so
     // Cargo changes the page exactly as it always does, just while the rectangle covers it. The rectangle waits
@@ -875,30 +872,14 @@
     var VEIL_WAIT_MS = 1500;    // ...and when the page for it is not in the DOM at all (still arriving): lift it after this long
     var VEIL_COLOR_MS = 500;    // when the color of the page being opened was not known: wait this long at most for it to settle
     var VEIL_SURE_MS = 200;     // a color that differs from the remembered one must have held this long before the rectangle turns into it
-    var VEIL_TURN_MS = 170;     // ...and this long for the rectangle to turn into it (the color and drawing fade over 150ms)
+    var VEIL_TURN_MS = 170;     // ...and this long for the rectangle to turn into it (the color fades over 150ms)
     var VEIL_MAX_MS = 2500;     // never keep the page covered longer than this
     var VEIL_WATCH_MS = 1200;   // after the click is handed on, wait this long for the address to change (a slow connection: Cargo fetches the page first)
     var VEIL_LATE_MS = 6000;    // ...and a link given up on is still watched this long, in case the page does arrive late
     var VEIL_RETRY_MS = 60000;  // a link that led nowhere is left alone this long
     var VEIL_KEY = "fx-page-veil", COLORS_KEY = "fx-page-colors", KINDS_KEY = "fx-link-kinds";
-    var ART = { w: 634.1, h: 138.1, r: 11.85, line: { x1: 83.65, x2: 556.25, y: 69.1, w: 4.2 },
-      dots: [[11.85, 69.1], [83.65, 69.1], [40.95, 98.35], [112.85, 98.35], [71.85, 126.25], [143.55, 126.25],
-             [502.25, 11.85], [568.15, 11.85], [527.15, 39.7], [593.05, 39.7], [556.25, 69.1], [622.25, 69.1]] };   // measured from the four designs
     var veil = mk("div", "fx-veil");
     veil.setAttribute("aria-hidden", "true");
-    (function () {
-      var NS = "http://www.w3.org/2000/svg";
-      function el(tag, attrs, cls) {
-        var e = document.createElementNS(NS, tag);
-        for (var k in attrs) e.setAttribute(k, attrs[k]);
-        if (cls) e.setAttribute("class", cls);
-        return e;
-      }
-      var svg = el("svg", { viewBox: "0 0 " + ART.w + " " + ART.h, focusable: "false" });
-      svg.appendChild(el("line", { x1: ART.line.x1, y1: ART.line.y, x2: ART.line.x2, y2: ART.line.y, "stroke-width": ART.line.w }, "fx-veil-line"));
-      ART.dots.forEach(function (d) { svg.appendChild(el("circle", { cx: d[0], cy: d[1], r: ART.r }, "fx-veil-dot")); });
-      veil.appendChild(svg);
-    })();
     var veilLate = null, veilAsk = null, veilOn = false, veilSeq = 0, veilWatch = 0, veilWait = 0, veilDone = 0, veilStep = 0, veilColor = null, veilSkip = {};
 
     function cssMs(name, dflt) {
@@ -911,14 +892,6 @@
     }
     function hexOf(c) { return "#" + [c.r, c.g, c.b].map(function (v) { return (v < 16 ? "0" : "") + v.toString(16); }).join("").toUpperCase(); }
     function closeTo(a, b, d) { return Math.abs(a.r - b.r) <= d && Math.abs(a.g - b.g) <= d && Math.abs(a.b - b.b) <= d; }
-    function artFor(c) {
-      for (var i = 0; i < VEIL_ART.length; i++) {
-        var p = fromHex(VEIL_ART[i].page);
-        if (Math.sqrt(Math.pow(p.r - c.r, 2) + Math.pow(p.g - c.g, 2) + Math.pow(p.b - c.b, 2)) <= COLOR_TOLERANCE) return VEIL_ART[i];
-      }
-      return null;
-    }
-
     // --- the colors of the pages: told in PAGE_COLORS, else read from the page itself and remembered ---
     var learned = {}, lastRead = { path: "", hex: "", t: 0 }, aliases = {};
     try { learned = JSON.parse(localStorage.getItem(COLORS_KEY) || "{}") || {}; } catch (e) { learned = {}; }
@@ -946,7 +919,10 @@
     // --- which kinds of link Cargo's router takes: "cargo" (rel="history", made in Cargo) and "bare" (any other) ---
     var kinds = {}, veilProbe = null;
     try { kinds = JSON.parse(localStorage.getItem(KINDS_KEY) || "{}") || {}; } catch (e) { kinds = {}; }
-    function kindOf(a) { return /(^|\s)history(\s|$)/i.test(a.getAttribute("rel") || "") ? "cargo" : "bare"; }
+    function kindOf(a) {
+      if (a.closest && a.closest(".fx-wordlinks, .fx-menu")) return "own";   // this code's own menu links
+      return /(^|\s)history(\s|$)/i.test(a.getAttribute("rel") || "") ? "cargo" : "bare";
+    }
     function setKind(k, v) {
       if (kinds[k] === v) return;
       kinds[k] = v;
@@ -1016,12 +992,8 @@
 
     // --- drawing the rectangle ---
     function veilPaint(c, instant) {
-      var art = artFor(c);
-      if (instant) veil.classList.add("fx-veil-still");
       veil.style.backgroundColor = rgb(c);
-      veil.style.setProperty("--fx-veil-dots", art ? art.dots : "transparent");
-      veil.style.setProperty("--fx-veil-line", art ? art.line : "transparent");
-      if (instant) { void veil.offsetWidth; veil.classList.remove("fx-veil-still"); }
+      if (instant) void veil.offsetWidth;
       veilColor = c;
     }
     function veilCover(c) {
@@ -1079,9 +1051,9 @@
         if (hex !== lastHex) hexSince = now;
         lastHex = hex;
         var differs = steady && (!veilColor || !closeTo(c, veilColor, 2)), hold = false;
-        if (o.guess && changedAt && differs && (pagesShown() === 1 || !document.querySelector(".page"))) {
+        if (o.guess && (changedAt || o.fresh) && differs && (pagesShown() === 1 || !document.querySelector(".page"))) {
           // the color of the page being opened was not known: as soon as the new page has shown its own color, the
-          // rectangle turns into it (and its drawing) while it is still fully up, then lifts
+          // rectangle turns into it while it is still fully up, then lifts
           veilRetarget(c); paintedAt = now;
         } else if (!o.guess && o.from && changedAt && differs && !closeTo(c, veilColor, 6) && !closeTo(c, o.from, 4) && pageFor(nowPath()) === 2) {
           // a remembered color that is not the page's any more (it was recolored): once the page's own color has held
@@ -1172,7 +1144,7 @@
       if (!from) return;
       if (pageFor(go.path) === 2) return;   // the page for that address is the one already showing (e.g. "/" and "/home"): nothing changes
       var kind = kindOf(go.a), mode = kinds[kind];
-      if (mode === "hard" || (kind === "bare" && mode !== "spa")) {   // not known to be taken by Cargo's router: the click goes through as it is, and what it does is noted
+      if (kind === "bare" ? mode !== "spa" : mode === "hard" && !window.__fxPre) {   // not known to be taken by Cargo's router (and no way to cover a whole page load): the click goes through as it is, and what it does is noted
         veilProbe = { kind: kind, t: performance.now(), path0: nowPath(), search0: location.search };
         return;
       }
@@ -1188,10 +1160,13 @@
       veilStep = setTimeout(veilPass, cssMs("--fx-page-in", VEIL_IN));
     }, true);
 
-    // The browser is loading a whole new page for a click: Cargo's router did not take that kind of link
+    // The browser is loading a whole new page for a click: Cargo's router did not take that kind of link. Only where the
+    // new page can be covered from its very first paint (the small snippet in the README is in the site's HTML, which
+    // sets window.__fxPre) the rectangle is carried over to it; anywhere else it would only make the new page blink.
     window.addEventListener("pagehide", function () {
-      var k = veilAsk && veilAsk.stage !== "cover" ? veilAsk.kind : veilProbe && performance.now() - veilProbe.t < 2500 ? veilProbe.kind : "";
+      var asked = veilAsk && veilAsk.stage !== "cover", k = asked ? veilAsk.kind : veilProbe && performance.now() - veilProbe.t < 2500 ? veilProbe.kind : "";
       if (k) setKind(k, "hard");
+      try { if (asked && veilOn && veilColor && window.__fxPre) sessionStorage.setItem(VEIL_KEY, JSON.stringify({ c: hexOf(veilColor), t: Date.now() })); } catch (e) {}
     });
     window.addEventListener("pageshow", function (e) {
       if (!e.persisted) return;   // back to a page kept in memory: show it as it was
@@ -1207,13 +1182,29 @@
       veilOn = false;
       root.classList.remove("fx-veil-on");
     });
-    try { sessionStorage.removeItem(VEIL_KEY); } catch (e) {}   // (an older version carried a rectangle over a full page load)
+    // The new page of a whole page load starts under the same rectangle (the snippet in the site's HTML has already put a
+    // flat cover of that color over it, from the very first paint); the rectangle takes over, the cover goes.
+    try {
+      var carried = JSON.parse(sessionStorage.getItem(VEIL_KEY) || "null"), cc = carried && /^#[0-9a-f]{6}$/i.test(carried.c) ? fromHex(carried.c) : null;
+      if (carried) sessionStorage.removeItem(VEIL_KEY);
+      if (cc && Date.now() - carried.t < 8000 && motionOk() && nowPath() !== menuPath) {
+        veilPaint(cc, true);
+        veil.style.opacity = "1";
+        veilOn = true;
+        veilHold = true;
+        root.classList.add("fx-veil-on");
+        lastIcon = hamburgerFor(cc);
+        nav.style.setProperty("--fx-nav-auto", lastIcon);
+        veilWaitFor(function (since, quiet, steady) { return document.readyState === "complete" && since >= 150 && (steady || since >= VEIL_COLOR_MS); }, pagesKey(), { guess: true, fresh: true });
+      }
+    } catch (e) {}
 
     document.body.appendChild(nav);
     document.body.appendChild(menu);
     document.body.appendChild(dock);
     document.body.appendChild(wordLayer);
     document.body.appendChild(veil);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { var pre = document.getElementById("fx-pre"); if (pre) pre.remove(); }); });   // the snippet's cover (if any) is no longer needed: the rectangle is there
 
     // The first color is applied without a fade, so the bar never flashes in the wrong color.
     // The page itself may still be arriving (this script runs before it), so stay in that

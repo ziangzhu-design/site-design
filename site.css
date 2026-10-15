@@ -489,9 +489,8 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
   }
 }
 /* ===================================================================
-   Page change - a rectangle in the color of the page being opened, with the drawing for that color on it
-   (twelve dots and a line, measured from the four designs; colors are VEIL_ART in site.js), fades in over the
-   whole page, then fades away over the new page. site.js drives it; it never takes a click.
+   Page change - a plain rectangle in the color of the page being opened (its background / wallpaper) fades in over
+   the whole page, then fades away over the new page. site.js drives it; it never takes a click.
    In total: --fx-page-in (fading in) + --fx-page-out (fading away) = about half a second; both ease in and out.
    =================================================================== */
 :root {
@@ -504,28 +503,6 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
   z-index: 2147482999;                     /* over the page and the menu, under the hamburger and the cursor */
   pointer-events: none;
   opacity: 0;
-  overflow: hidden;
-}
-.fx-veil svg {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(78.7vw, 320vh);               /* as in the designs: about 79% of the width, centered (only a very wide, short window makes it smaller) */
-  height: auto;
-  transform: translate(-50%, -50%);
-  overflow: visible;
-}
-.fx-veil-dot {
-  fill: var(--fx-veil-dots, transparent);
-  transition: fill 150ms ease;
-}
-.fx-veil-line {
-  stroke: var(--fx-veil-line, transparent);
-  transition: stroke 150ms ease;
-}
-.fx-veil.fx-veil-still .fx-veil-dot,
-.fx-veil.fx-veil-still .fx-veil-line {
-  transition: none;
 }
 @media print {
   .fx-nav,
