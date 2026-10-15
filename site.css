@@ -18,6 +18,9 @@
 .fx-cursor.fx-blend { mix-blend-mode: difference; opacity: 0; }
 html.fx-over-text .fx-cursor.fx-blend { opacity: 1; }
 html.fx-over-text .fx-cursor:not(.fx-blend) { opacity: 0; }
+/* While the page-change rectangle is up the plain white ball is used: inverting a flat color gives colors that are not the site's */
+html.fx-veil-on .fx-cursor.fx-blend { opacity: 0; }
+html.fx-veil-on .fx-cursor:not(.fx-blend) { opacity: 1; }
 
 /* Layer 1: grows over clickable things. It is also what fades in when the pointer enters the window
    and out when it leaves (that fade is not the color change, and stays gentle). */
@@ -485,11 +488,51 @@ html.fx-menu-themed .page[page-url="site-menu"] .page-content hr[data-fx-rule="f
     transition: none;
   }
 }
+/* ===================================================================
+   Page change - a rectangle in the color of the page being opened, with the drawing for that color on it
+   (twelve dots and a line, measured from the four designs; colors are VEIL_ART in site.js), fades in over the
+   whole page, then fades away over the new page. site.js drives it; it never takes a click.
+   In total: --fx-page-in (fading in) + --fx-page-out (fading away) = about half a second; both ease in and out.
+   =================================================================== */
+:root {
+  --fx-page-in: 170ms;
+  --fx-page-out: 280ms;
+}
+.fx-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482999;                     /* over the page and the menu, under the hamburger and the cursor */
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+}
+.fx-veil svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(78.7vw, 320vh);               /* as in the designs: about 79% of the width, centered (only a very wide, short window makes it smaller) */
+  height: auto;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.fx-veil-dot {
+  fill: var(--fx-veil-dots, transparent);
+  transition: fill 150ms ease;
+}
+.fx-veil-line {
+  stroke: var(--fx-veil-line, transparent);
+  transition: stroke 150ms ease;
+}
+.fx-veil.fx-veil-still .fx-veil-dot,
+.fx-veil.fx-veil-still .fx-veil-line {
+  transition: none;
+}
 @media print {
   .fx-nav,
   .fx-menu,
   .fx-clock-dock,
-  .fx-wordlinks {
+  .fx-wordlinks,
+  .fx-veil {
     display: none;
   }
   .pages {

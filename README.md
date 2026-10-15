@@ -66,6 +66,41 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   block, tan digital panel with olive time, line, date and dot; sienna menu - the same with a near-black face
   and sienna dots, sweeping hand and middle dot. They are the `--fx-clock-*` colors in `site.css` (site.js
   puts the menu's color on `<html>` as `data-fx-menu-bg`).
+- **Page change** - clicking a link to another page of the site fades a full-page rectangle over the page and
+  away again, about half a second in all: it eases in over the whole page and its content (`--fx-page-in`,
+  170ms), the page changes underneath, and it eases away (`--fx-page-out`, 280ms) over the new page. The
+  rectangle is the color of the page being opened (its background / wallpaper) and carries that color's
+  drawing - twelve dots and a line, measured from the four designs, about 79% of the window's width and
+  centered - so a #D6C6B0 page gets tan with sienna dots and an olive line, #2B2A28 gets near-black with tan
+  dots and a sienna line, #5E6B4E gets olive with near-black dots and a tan line, and #A0522D gets sienna with
+  tan dots and a near-black line (`VEIL_ART` at the top of `site.js`). Any other page color gets the plain
+  rectangle, with no drawing. While it is up the hamburger takes the color that suits the page being opened
+  and the cursor is the plain white ball.
+  - **How the page's color is known:** read from the page itself and remembered in the visitor's browser
+    (`localStorage`; a color counts once it has stayed the same on a page for 0.6 seconds), so from the second
+    visit the rectangle has the right color the instant a link is clicked. The very first time a page is opened
+    the rectangle starts in the current page's color and, as soon as the new page shows its own, turns into it
+    (and its drawing) while still fully up, then lifts - this adds a moment. To have it right from the first
+    click, list the page in `PAGE_COLORS` at the top of `site.js` (`"/about-me": "#D6C6B0"`).
+  - **How it works:** the click is held back for the length of the fade-in and then handed to the page again
+    as an ordinary click, so Cargo changes the page exactly as it always does, just while the rectangle covers
+    it. The rectangle lifts once the new page (a `.page` in Cargo's markup) has come in, is showing and has
+    stopped changing (never later than 2.5 seconds; a page that is slow to arrive keeps it up). If a click leads
+    nowhere (no new address and no page appearing within 1.2 seconds) the rectangle lifts again and that link
+    is left alone for a minute - unless the page does turn up late, which clears that.
+  - **Cargo's own page transition:** if Cargo has a page transition turned on in its design settings, turn it off (None), so the rectangle is the
+    only transition; with Cargo's fade on, the rectangle waits for that fade too and takes longer than half a
+    second.
+  - **Left alone (nothing held back, no rectangle):** links to other sites, new-tab clicks (ctrl / cmd /
+    shift), downloads and files, `#anchor` links, links to the page you are already on (even under another address, like
+    `/` and `/home`), the menu page, links
+    inside an svg or in text being edited, the end of a drag, a click another script already took, the back and
+    forward buttons (pressing one while the rectangle is coming up cancels the held-back click), the very first load of the site, and visitors who ask for less motion. Cargo overlays other
+    than the site menu open without changing the address: list them in `VEIL_SKIP_PATHS` at the top of
+    `site.js` so links to them are left alone too.
+  - **If the browser does a full page load** (a link Cargo does not take over) the new page starts under the
+    same rectangle (carried over in `sessionStorage`) once the script has loaded; there can be a brief
+    moment before that when the new page shows uncovered.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over
