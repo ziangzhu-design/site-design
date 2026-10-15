@@ -864,8 +864,11 @@
     // changed within 1.2 seconds) the rectangle lifts again, and that link is left alone for a minute.
     // Nothing is held back for: another site, a new tab (ctrl / cmd / shift click), a download or file, a #anchor,
     // the menu page, back / forward, the very first load, or visitors who ask for less motion.
-    // If the browser does a full page load instead, the rectangle is carried over in sessionStorage and the new
-    // page starts under it.
+    // Which links Cargo's router takes (a page change inside the page) and which make the browser load a whole new page
+    // is found out, not assumed: links made in Cargo (rel="history") are taken; any other link (this code's own menu
+    // links) is let through untouched the first time and watched - if the address changes with the page staying
+    // alive the rectangle is used for that kind of link from then on, if the browser loads a whole new page it never
+    // is (a rectangle over a page that is about to be thrown away would only make the new page blink in behind it).
     var VEIL_IN = 170, VEIL_OUT = 280;   // ms; the defaults of --fx-page-in / --fx-page-out
     var VEIL_SETTLE_MS = 60;    // the new page must have stopped changing this long before the rectangle lifts
     var VEIL_STALE_MS = 700;    // no change of page seen this long after the address changed, but the page for it is showing: lift it
@@ -877,7 +880,7 @@
     var VEIL_WATCH_MS = 1200;   // after the click is handed on, wait this long for the address to change (a slow connection: Cargo fetches the page first)
     var VEIL_LATE_MS = 6000;    // ...and a link given up on is still watched this long, in case the page does arrive late
     var VEIL_RETRY_MS = 60000;  // a link that led nowhere is left alone this long
-    var VEIL_KEY = "fx-page-veil", COLORS_KEY = "fx-page-colors";
+    var VEIL_KEY = "fx-page-veil", COLORS_KEY = "fx-page-colors", KINDS_KEY = "fx-link-kinds";
     var ART = { w: 634.1, h: 138.1, r: 11.85, line: { x1: 83.65, x2: 556.25, y: 69.1, w: 4.2 },
       dots: [[11.85, 69.1], [83.65, 69.1], [40.95, 98.35], [112.85, 98.35], [71.85, 126.25], [143.55, 126.25],
              [502.25, 11.85], [568.15, 11.85], [527.15, 39.7], [593.05, 39.7], [556.25, 69.1], [622.25, 69.1]] };   // measured from the four designs
@@ -939,6 +942,15 @@
       if (now - lastRead.t < 600) return;
       learn(path, c);
       (aliases[path] || []).forEach(function (a) { learn(a, c); });
+    }
+    // --- which kinds of link Cargo's router takes: "cargo" (rel="history", made in Cargo) and "bare" (any other) ---
+    var kinds = {}, veilProbe = null;
+    try { kinds = JSON.parse(localStorage.getItem(KINDS_KEY) || "{}") || {}; } catch (e) { kinds = {}; }
+    function kindOf(a) { return /(^|\s)history(\s|$)/i.test(a.getAttribute("rel") || "") ? "cargo" : "bare"; }
+    function setKind(k, v) {
+      if (kinds[k] === v) return;
+      kinds[k] = v;
+      try { localStorage.setItem(KINDS_KEY, JSON.stringify(kinds)); } catch (e) {}
     }
     function colorOf(path) {
       var h = PAGE_COLORS[path] || learned[path];
@@ -1067,7 +1079,7 @@
         if (hex !== lastHex) hexSince = now;
         lastHex = hex;
         var differs = steady && (!veilColor || !closeTo(c, veilColor, 2)), hold = false;
-        if (o.guess && (changedAt || o.fresh) && differs && (pagesShown() === 1 || !document.querySelector(".page"))) {
+        if (o.guess && changedAt && differs && (pagesShown() === 1 || !document.querySelector(".page"))) {
           // the color of the page being opened was not known: as soon as the new page has shown its own color, the
           // rectangle turns into it (and its drawing) while it is still fully up, then lifts
           veilRetarget(c); paintedAt = now;
@@ -1087,6 +1099,7 @@
       if (!ask || ask.stage !== "route") return;
       ask.stage = "settle";
       ask.landed = nowPath();
+      setKind(ask.kind, "spa");
       clearInterval(veilWatch);
       veilWaitFor(function (since, quiet, steady, page) {
         var arrived = quiet >= VEIL_SETTLE_MS && page !== 1 && (pagesShown() > 0 || !document.querySelector(".page"));   // (nothing showing yet, or the page for this address in but not shown: wait for it)
@@ -1095,7 +1108,8 @@
       }, ask.key, { guess: ask.guess, from: ask.from, from0: ask.t0 });
     }
     routeHook = function () {
-      var ask = veilAsk;
+      var ask = veilAsk, pr = veilProbe;
+      if (pr && performance.now() - pr.t < 2500 && nowPath() !== menuPath && (nowPath() !== pr.path0 || location.search !== pr.search0)) { setKind(pr.kind, "spa"); veilProbe = null; }
       veilLateCheck();
       if (!ask || ask.stage !== "route") return;
       if (nowPath() === menuPath) return veilGiveUp(ask);   // the menu page's own address is not a page change
@@ -1157,10 +1171,15 @@
       var from = pageBackground(true);
       if (!from) return;
       if (pageFor(go.path) === 2) return;   // the page for that address is the one already showing (e.g. "/" and "/home"): nothing changes
+      var kind = kindOf(go.a), mode = kinds[kind];
+      if (mode === "hard" || (kind === "bare" && mode !== "spa")) {   // not known to be taken by Cargo's router: the click goes through as it is, and what it does is noted
+        veilProbe = { kind: kind, t: performance.now(), path0: nowPath(), search0: location.search };
+        return;
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
       var dest = colorOf(go.path);
-      veilAsk = { a: go.a, attr: go.a.getAttribute("href"), text: go.a.textContent.trim(), href: go.href, path0: nowPath(), search0: location.search, key: pagesKey(), from: from, t0: performance.now(), guess: !dest, linkPath: go.path, stage: "cover", t: performance.now() };
+      veilAsk = { kind: kind, a: go.a, attr: go.a.getAttribute("href"), text: go.a.textContent.trim(), href: go.href, path0: nowPath(), search0: location.search, key: pagesKey(), from: from, t0: performance.now(), guess: !dest, linkPath: go.path, stage: "cover", t: performance.now() };
       veilSeq++;
       clearTimeout(veilWait);
       clearInterval(veilWatch);
@@ -1169,14 +1188,16 @@
       veilStep = setTimeout(veilPass, cssMs("--fx-page-in", VEIL_IN));
     }, true);
 
-    // A full page load (Cargo didn't take the link): the new page starts under the same rectangle
+    // The browser is loading a whole new page for a click: Cargo's router did not take that kind of link
     window.addEventListener("pagehide", function () {
-      try { if (veilOn && veilColor) sessionStorage.setItem(VEIL_KEY, JSON.stringify({ c: rgb(veilColor), t: Date.now() })); } catch (e) {}
+      var k = veilAsk && veilAsk.stage !== "cover" ? veilAsk.kind : veilProbe && performance.now() - veilProbe.t < 2500 ? veilProbe.kind : "";
+      if (k) setKind(k, "hard");
     });
     window.addEventListener("pageshow", function (e) {
       if (!e.persisted) return;   // back to a page kept in memory: show it as it was
       try { sessionStorage.removeItem(VEIL_KEY); } catch (x) {}
       veilAsk = null;
+      veilProbe = null;
       veilSeq++;
       clearInterval(veilWatch);
       clearTimeout(veilStep);
@@ -1186,20 +1207,7 @@
       veilOn = false;
       root.classList.remove("fx-veil-on");
     });
-    try {
-      var carried = JSON.parse(sessionStorage.getItem(VEIL_KEY) || "null"), cc = carried && parseColor(carried.c);
-      if (carried) sessionStorage.removeItem(VEIL_KEY);
-      if (cc && Date.now() - carried.t < 8000 && motionOk() && nowPath() !== menuPath) {
-        veilPaint(cc, true);
-        veil.style.opacity = "1";
-        veilOn = true;
-        veilHold = true;
-        root.classList.add("fx-veil-on");
-        lastIcon = hamburgerFor(cc);
-        nav.style.setProperty("--fx-nav-auto", lastIcon);
-        veilWaitFor(function (since, quiet, steady) { return document.readyState === "complete" && since >= 150 && (steady || since >= VEIL_COLOR_MS); }, pagesKey(), { guess: true, fresh: true });
-      }
-    } catch (e) {}
+    try { sessionStorage.removeItem(VEIL_KEY); } catch (e) {}   // (an older version carried a rectangle over a full page load)
 
     document.body.appendChild(nav);
     document.body.appendChild(menu);

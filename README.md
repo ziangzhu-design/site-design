@@ -98,9 +98,13 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
     forward buttons (pressing one while the rectangle is coming up cancels the held-back click), the very first load of the site, and visitors who ask for less motion. Cargo overlays other
     than the site menu open without changing the address: list them in `VEIL_SKIP_PATHS` at the top of
     `site.js` so links to them are left alone too.
-  - **If the browser does a full page load** (a link Cargo does not take over) the new page starts under the
-    same rectangle (carried over in `sessionStorage`) once the script has loaded; there can be a brief
-    moment before that when the new page shows uncovered.
+  - **Links that load a whole new page:** which links Cargo's router takes (a page change inside the page) and
+    which make the browser load a whole new page is found out, not assumed. Links made in Cargo (`rel="history"`)
+    get the rectangle. Any other link, such as this code's own menu links (ABOUT / WORKS), is let through
+    untouched the first time and watched: if the address changes while the page stays alive, that kind of link
+    gets the rectangle from then on; if the browser loads a whole new page, it never does (a rectangle over a
+    page about to be thrown away would only make the new page blink in behind it). What was found out is kept
+    in the visitor's browser (`localStorage`, `fx-link-kinds`) and corrects itself if it turns out wrong.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over
