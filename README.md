@@ -5,6 +5,7 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
 ## Files
 - `site.css` - styles
 - `site.js` - behavior
+- `pagefade.js` - the page change fade (a separate, optional script: see below)
 
 ## What's in it
 - **Navigation bar** - fixed to the top with a hamburger on the right. The hamburger changes
@@ -66,6 +67,42 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   block, tan digital panel with olive time, line, date and dot; sienna menu - the same with a near-black face
   and sienna dots, sweeping hand and middle dot. They are the `--fx-clock-*` colors in `site.css` (site.js
   puts the menu's color on `<html>` as `data-fx-menu-bg`).
+- **Page change fade** (`pagefade.js`) - clicking a link to another page of the site fades a plain rectangle over
+  the whole page and away again, about a quarter of a second in all: it eases in over the page and its
+  content (120ms), the page changes underneath, and it eases away (130ms). The rectangle is the color of the page
+  being opened (its background / wallpaper): #D6C6B0, #2B2A28, #5E6B4E, #A0522D, or whatever the page is.
+  - **It stands completely on its own.** It is its own script, loaded with its own line (see "Loading it"). It does
+    not touch `site.js`, the hamburger, the menu, the clock or the cursor; it never holds back, changes or cancels
+    a click, and never changes the address or the page - it only watches, and draws a rectangle that cannot be
+    clicked and sits just under the hamburger. Everything in it is wrapped so that whatever goes wrong the page
+    carries on as if the file were not there, and a watchdog always clears the rectangle. To switch it off,
+    remove its one line from the HTML panel; nothing else changes.
+  - **How the page's color is known:** read from the page itself and remembered in the visitor's browser
+    (`localStorage`, `fx-page-colors`; a color is remembered once the page and its address have stayed the same
+    for about a second and a half, with a single page showing), so from the second visit
+    the rectangle has the right color from the first moment. The very first time a page is opened the rectangle
+    starts in the current page's color and turns into the new page's as it goes. To have it right from the first
+    click, list the page in `PAGE_COLORS` at the top of `pagefade.js` (`"/about-me": "#D6C6B0"`).
+  - **When it starts and ends:** with a mouse it starts when the button goes down (a press and release take about
+    a tenth of a second), so it is already coming up when the page changes; with touch or the keyboard it starts
+    with the click and comes up fast, so the page change is under the color from the start. It goes once the new
+    page has come in, is showing and has stopped changing - and in any case no later than 0.35 seconds after it
+    started (then 0.13 seconds to fade): the rectangle never stays, however slow the page is (on a slow page the
+    old page can show again for a moment before the new one arrives). A press that does not lead to a click (a
+    drag, moving away, releasing elsewhere) cancels it at once; a click that leads nowhere just flashes and goes;
+    a long run of presses (the same link pressed again and again) cannot keep it up beyond about 1.3 seconds. If the page has another color than the one
+    the rectangle had (a page never seen before, or recolored in Cargo) the rectangle turns into the page's real
+    color as it goes. This also keeps the hamburger safe: on the pairs of colors that go together (olive and tan,
+    near-black and sienna) the hamburger is the same color as the rectangle, so it fades with the page for these
+    fractions of a second and is back with the new page.
+  - **Left alone (no rectangle):** links to other sites, new-tab clicks (ctrl / cmd / shift), downloads and files,
+    `#anchor` links, links to the page already showing (also `/` and `/home`), the menu page, links inside an svg
+    or in text being edited, the end of a drag, the back and forward buttons, the very first load of the site,
+    and visitors who ask for less motion. Cargo overlays other than the site menu open without changing the
+    address: list them in `SKIP_PATHS` at the top of `pagefade.js`.
+  - **A link that makes the browser load a whole new page** just changes page as the browser always does: the
+    rectangle starts, and the new page replaces it (nothing is carried over, so nothing blinks).
+  - If Cargo has a page transition of its own switched on, turn it off, so the rectangle is the only one.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over
@@ -82,4 +119,11 @@ commit id (a fixed id avoids stale cached copies):
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@COMMIT/site.css">
 <script src="https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@COMMIT/site.js" defer></script>
+```
+
+The page change fade is a separate, optional third line (its own file, so it can be added or removed without
+touching the two above):
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@COMMIT/pagefade.js" defer></script>
 ```
