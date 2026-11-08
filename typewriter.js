@@ -2,7 +2,7 @@
    On the home page the two title sentences type themselves out, letter by letter, each letter fading in: each sentence
    in one second, with an uneven, human rhythm (small hesitations, a breath after a comma or a line end, the odd quick
    run of letters). The first sentence types as the page appears, the second right after it (or when it is scrolled to).
-   The image above the first sentence fades in at the same time, over half a second (once it has loaded, so it never
+   The image above the first sentence fades in at the same time, over one and a half seconds (once it has loaded, so it never
    pops in half-way).
 
    It stands completely on its own: it does not touch site.js, pagefade.js, the hamburger, the menu, the clock or the
@@ -23,7 +23,7 @@
   var DURATION = 1000;       // ms each sentence takes, from its first letter starting to its last letter fully there
   var FADE = 170;            // ms each letter takes to fade in
   var PAUSE = 180;           // ms between the end of one sentence and the start of the next
-  var IMAGE_FADE = 500;      // ms the image above the first sentence takes to fade in (as the page appears, once it has loaded)
+  var IMAGE_FADE = 1500;     // ms the image above the first sentence takes to fade in (as the page appears, once it has loaded)
   var IMAGE_WAIT = 3000;     // ms to wait at most for that image to load before it fades in anyway
   // ----------------------------------------------------------------------------------------------------------
 
