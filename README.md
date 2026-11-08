@@ -6,6 +6,7 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
 - `site.css` - styles
 - `site.js` - behavior
 - `pagefade.js` - the page change fade (a separate, optional script: see below)
+- `typewriter.js` - the typing title sentences on the home page (a separate, optional script: see below)
 
 ## What's in it
 - **Navigation bar** - fixed to the top with a hamburger on the right. The hamburger changes
@@ -103,6 +104,23 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   - **A link that makes the browser load a whole new page** just changes page as the browser always does: the
     rectangle starts, and the new page replaces it (nothing is carried over, so nothing blinks).
   - If Cargo has a page transition of its own switched on, turn it off, so the rectangle is the only one.
+- **Typing titles on the home page** (`typewriter.js`) - on /home the two title sentences, "ZIANGZHU... is a
+  multidisciplinary graphic designer" and "Who constructs bridges between curiosities, identities, and aesthetics.",
+  type themselves out letter by letter, each letter fading in (170ms): each sentence in one second, with an
+  uneven, human rhythm (a little different every time: small hesitations, a quick run of letters now and then, a
+  breath after a comma and at a line break). The first sentence types as the page appears, the second right after
+  it (0.18 seconds later), or, on a phone, when it is scrolled to.
+  - **Nothing moves:** every letter keeps its place from the start (it is only see-through until its turn), so the
+    layout never shifts; when a sentence is done, its text is put back exactly as Cargo made it.
+  - **Every visit:** it types again each time the home page is opened, also when coming back from another page or
+    through the menu. Visitors who ask for less motion just see the text.
+  - **Which sentences:** `SENTENCES` at the top of `typewriter.js`, written as they read on the page (capitals,
+    spaces, punctuation and line breaks do not matter: the sentences are found by their letters). The timing is
+    `DURATION` (1000ms per sentence), `FADE` and `PAUSE` there too. If a sentence is changed in Cargo, change it
+    there as well - a sentence that is not found is simply left as it is.
+  - **It stands on its own:** it is its own script with its own line in the HTML panel; it does not touch
+    `site.js`, `pagefade.js`, the hamburger or the menu, and if anything in it goes wrong the text simply shows as
+    usual. To switch it off, remove its line.
 - **Custom cursor** - white breathing ball (mouse devices only) that grows over clickable
   things and inverts over text, images, Cargo's own clock, the clock in the menu, the hamburger and
   horizontal rules. Over
@@ -126,4 +144,10 @@ touching the two above):
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@COMMIT/pagefade.js" defer></script>
+```
+
+The typing titles are another separate, optional line:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/ziangzhu-design/site-design@COMMIT/typewriter.js" defer></script>
 ```
