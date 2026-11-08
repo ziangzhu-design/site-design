@@ -2,6 +2,8 @@
    On the home page the two title sentences type themselves out, letter by letter, each letter fading in: each sentence
    in one second, with an uneven, human rhythm (small hesitations, a breath after a comma or a line end, the odd quick
    run of letters). The first sentence types as the page appears, the second right after it (or when it is scrolled to).
+   The image above the first sentence fades in at the same time, over half a second (once it has loaded, so it never
+   pops in half-way).
 
    It stands completely on its own: it does not touch site.js, pagefade.js, the hamburger, the menu, the clock or the
    cursor. It never moves anything: every letter keeps its place from the start (it is only see-through until its turn),
@@ -21,9 +23,12 @@
   var DURATION = 1000;       // ms each sentence takes, from its first letter starting to its last letter fully there
   var FADE = 170;            // ms each letter takes to fade in
   var PAUSE = 180;           // ms between the end of one sentence and the start of the next
+  var IMAGE_FADE = 500;      // ms the image above the first sentence takes to fade in (as the page appears, once it has loaded)
+  var IMAGE_WAIT = 3000;     // ms to wait at most for that image to load before it fades in anyway
   // ----------------------------------------------------------------------------------------------------------
 
   var CHAR = "fx-tw-c", ON = "fx-tw-on", WRAP = "fx-tw";
+  var pics = [];
   var view = 0, lastPath = "", items = [], timer = 0, raf = 0, later = 0, off = false, styled = false;
 
   function warn(e) { try { console.warn("[fx] typewriter stopped:", e); } catch (x) {} }
@@ -188,6 +193,23 @@
           if (it.next >= it.steps.length && t >= DURATION) finish(it);
         }
       }
+      for (var q = 0; q < pics.length; q++) {
+        var pic = pics[q];
+        if (pic.state === "done") continue;
+        busy = true;
+        if (!pic.el.isConnected) { pic.state = "done"; continue; }
+        if (pic.state === "wait") {
+          var shown = onScreen(pic.el) && (!pic.el.parentElement || minOpacity(pic.el.parentElement) >= 0.05) && !veilUp();
+          if (!shown) { pic.seenAt = 0; continue; }
+          if (!pic.seenAt) pic.seenAt = now;
+          var waited = now - pic.seenAt;
+          if (waited < 120 || (!picLoaded(pic.el) && waited < IMAGE_WAIT)) continue;   // (with the first sentence, and once the picture is really there)
+          pic.el.style.transition = "opacity " + IMAGE_FADE + "ms ease-out";
+          pic.el.style.opacity = "1";
+          pic.state = "fading";
+          pic.t0 = now;
+        } else if (pic.state === "fading" && now - pic.t0 >= IMAGE_FADE + 60) restorePic(pic);
+      }
       if (busy) {
         if (typing) raf = requestAnimationFrame(pump);
         else later = setTimeout(pump, 100);   // (only waiting - for the page to show, or to be scrolled to: look a little less often)
@@ -213,8 +235,32 @@
       if (w.wrap.parentNode) w.wrap.parentNode.replaceChild(w.orig, w.wrap);
     }
   }
+  // ---- the image above the first sentence: see-through until the page shows (and the image has loaded), then it fades in
+  function picLoaded(el) {
+    var img = el.tagName === "IMG" ? el : (el.shadowRoot && el.shadowRoot.querySelector("img")) || el.querySelector("img");
+    if (!img) return !!(el.shadowRoot || el.querySelector("video, svg, canvas"));   // (not an <img>: nothing to wait for)
+    var src = img.currentSrc || img.src || "";
+    return img.complete && img.naturalWidth > 2 && !/^data:/.test(src);   // (Cargo first shows a 1x1 placeholder)
+  }
+  function preparePics(page, root, anchor) {
+    pics.forEach(function (pic) { if (pic.page === page && pic.state !== "done") restorePic(pic); });
+    var all = root.querySelectorAll("media-item, img");
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.tagName === "IMG" && el.closest("media-item")) continue;
+      if (!(anchor.compareDocumentPosition(el) & 2 /* before it */)) continue;
+      pics.push({ page: page, el: el, orig: el.getAttribute("style"), state: "wait", seenAt: 0 });
+      el.style.transition = "none";
+      el.style.opacity = "0";
+    }
+  }
+  function restorePic(pic) {   // as it was: the style attribute exactly as Cargo left it
+    pic.state = "done";
+    if (pic.orig === null) pic.el.removeAttribute("style"); else pic.el.setAttribute("style", pic.orig);
+  }
   function showAll() {   // whatever went wrong: everything shows, as it always does
     off = true;
+    for (var k = 0; k < pics.length; k++) { try { if (pics[k].state !== "done") restorePic(pics[k]); } catch (e) {} }
     for (var i = 0; i < items.length; i++) { try { items[i].state = "done"; restore(items[i]); } catch (e) {} }
     try { var left = document.querySelectorAll("." + CHAR); for (var j = 0; j < left.length; j++) left[j].className = CHAR + " " + ON; } catch (e) {}
   }
@@ -247,6 +293,10 @@
         for (var s = 0; s < SENTENCES.length; s++) {
           var parts = locate(root, SENTENCES[s]);
           if (!parts || !parts.length) continue;
+          if (s === 0 && page.__fxPicView !== view) {   // (once per visit: not again when Cargo only puts new text in)
+            page.__fxPicView = view;
+            try { preparePics(page, root, parts[0].node); } catch (e) { warn(e); }
+          }
           if (parts[0].node.parentNode && parts[0].node.parentNode.closest && parts[0].node.parentNode.closest("." + WRAP)) continue;
           var made = prepare(parts);
           if (!made.steps.length) { restore(made); continue; }
@@ -256,7 +306,8 @@
         }
       }
       items = items.filter(function (it) { return it.state !== "done" || (it.doneAt && performance.now() - it.doneAt < 1000); });
-      if (items.length) kick();
+      pics = pics.filter(function (pic) { return pic.state !== "done"; });
+      if (items.length || pics.length) kick();
     } catch (e) { warn(e); showAll(); }
   }
 

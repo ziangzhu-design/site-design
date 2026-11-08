@@ -109,7 +109,9 @@ Custom CSS/JS for https://ziangzhu.site (Cargo 3), loaded through jsDelivr.
   type themselves out letter by letter, each letter fading in (170ms): each sentence in one second, with an
   uneven, human rhythm (a little different every time: small hesitations, a quick run of letters now and then, a
   breath after a comma and at a line break). The first sentence types as the page appears, the second right after
-  it (0.18 seconds later), or, on a phone, when it is scrolled to.
+  it (0.18 seconds later), or, on a phone, when it is scrolled to. The image above the first sentence fades in at
+  the same time, over half a second (`IMAGE_FADE`); if it is still loading, it waits for it (at most 3 seconds,
+  `IMAGE_WAIT`), so it never pops in half-way. Afterwards the image is left exactly as Cargo made it.
   - **Nothing moves:** every letter keeps its place from the start (it is only see-through until its turn), so the
     layout never shifts; when a sentence is done, its text is put back exactly as Cargo made it.
   - **Every visit:** it types again each time the home page is opened, also when coming back from another page or
